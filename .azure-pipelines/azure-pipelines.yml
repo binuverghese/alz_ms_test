@@ -36,7 +36,8 @@ stages:
               scriptType: "bash"
               scriptLocation: "inlineScript"
               inlineScript: |
-                echo "Logged into Azure"
+                az account show
+                echo "Azure CLI Authentication Successful"
 
           # Terraform Init
           - script: |
