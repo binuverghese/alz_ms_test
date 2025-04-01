@@ -1,0 +1,25 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- task: AzureCLI@2
+  name: RunTerraform
+  inputs:
+    azureSubscription: AzureDevopsTF # The name of your service connection goes here
+    scriptType: bash
+    scriptLocation: inlineScript
+    addSpnToEnvironment: true
+    inlineScript: |
+      export ARM_TENANT_ID="$tenantId"
+      export ARM_CLIENT_ID="$servicePrincipalId"
+      export ARM_OIDC_TOKEN="$idToken"
+      terraform init
+      terraform apply -auto-approve
