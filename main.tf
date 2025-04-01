@@ -22,15 +22,11 @@ terraform {
 
 provider "azurerm" {
   features {}
-
-  subscription_id = "82f459ea-d085-4aeb-9f3a-33f009c19cd4"
-  tenant_id       = "16b3c013-d300-468d-ac64-7eda0820b6d3"
-  client_id       = "79395060-6763-4deb-b461-0052b8636892"
-  use_oidc        = true  # Using OIDC for Azure DevOps Pipelines
+   use_oidc        = true  #
 }
 
 provider "azapi" {
-  use_oidc = true
+  
 }
 
 # Resource Group
