@@ -1,0 +1,62 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - main
+
+variables:
+  - group: TerraformSecrets  # Reference stored secrets in ADO
+
+stages:
+  - stage: Terraform_Deployment
+    displayName: "Terraform Deployment"
+    jobs:
+      - job: Terraform_Deploy
+        displayName: "Deploy Terraform"
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - checkout: self
+
+          - task: TerraformInstaller@1
+            displayName: "Install Terraform"
+            inputs:
+              terraformVersion: '1.9.2'
+
+          - task: AzureCLI@2
+            displayName: "Azure Login"
+            inputs:
+              azureSubscription: "Terraform Deployment Connection"
+              scriptType: "bash"
+              scriptLocation: "inlineScript"
+              inlineScript: |
+                echo "Logged into Azure"
+
+          - script: terraform init
+            displayName: "Terraform Init"
+            env:
+              ARM_USE_OIDC: true
+              ARM_CLIENT_ID: $(AZURE_CLIENT_ID)
+              ARM_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
+              ARM_TENANT_ID: $(AZURE_TENANT_ID)
+
+          - script: terraform plan -out=tfplan
+            displayName: "Terraform Plan"
+            env:
+              ARM_USE_OIDC: true
+              ARM_CLIENT_ID: $(AZURE_CLIENT_ID)
+              ARM_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
+              ARM_TENANT_ID: $(AZURE_TENANT_ID)
+
+          - script: terraform apply -auto-approve tfplan
+            displayName: "Terraform Apply"
+            condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
+            env:
+              ARM_USE_OIDC: true
+              ARM_CLIENT_ID: $(AZURE_CLIENT_ID)
+              ARM_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
+              ARM_TENANT_ID: $(AZURE_TENANT_ID)
