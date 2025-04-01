@@ -40,6 +40,17 @@ stages:
           #       az account show
           #       echo "Azure CLI Authentication Successful"
 
+          # Terraform Plan using AzureCLI@2 Task instead of script task
+          - task: AzureCLI@2
+            displayName: "Terraform Plan"
+            #addSpnToEnvironment: true
+            inputs:
+              azureSubscription: "Terraform Deployment Connection"
+              scriptType: "bash"
+              scriptLocation: "inlineScript"
+              inlineScript: |
+                terraform plan -out=tfplan -input=false      
+
           # Terraform Init
           - script: |
               terraform init -input=false
