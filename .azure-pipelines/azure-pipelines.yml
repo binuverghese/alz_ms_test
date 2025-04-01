@@ -32,14 +32,15 @@ stages:
           - task: AzureCLI@2
             displayName: "Azure Login"
             inputs:
-              azureSubscription: "Terraform Deployment Connection"  # Service connection name
+              azureSubscription: "Terraform Deployment Connection"  # Ensure this matches the service connection name
               scriptType: "bash"
               scriptLocation: "inlineScript"
               inlineScript: |
                 echo "Logged into Azure"
 
           # Terraform Init
-          - script: terraform init
+          - script: |
+              terraform init -input=false
             displayName: "Terraform Init"
             env:
               ARM_USE_OIDC: true
@@ -47,8 +48,14 @@ stages:
               ARM_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
               ARM_TENANT_ID: $(AZURE_TENANT_ID)
 
+          # Terraform Validate (Checks syntax and configuration before applying)
+          - script: |
+              terraform validate
+            displayName: "Terraform Validate"
+
           # Terraform Plan
-          - script: terraform plan -out=tfplan
+          - script: |
+              terraform plan -out=tfplan -input=false
             displayName: "Terraform Plan"
             env:
               ARM_USE_OIDC: true
@@ -56,10 +63,16 @@ stages:
               ARM_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
               ARM_TENANT_ID: $(AZURE_TENANT_ID)
 
-          # Terraform Apply (only on main branch)
-          - script: terraform apply -auto-approve tfplan
+          # Terraform Apply (only on main branch and if plan file exists)
+          - script: |
+              if [ -f "tfplan" ]; then
+                terraform apply -auto-approve tfplan
+              else
+                echo "Terraform plan file not found. Skipping apply."
+                exit 1
+              fi
             displayName: "Terraform Apply"
-            condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
             env:
               ARM_USE_OIDC: true
               ARM_CLIENT_ID: $(AZURE_CLIENT_ID)
