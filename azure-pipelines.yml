@@ -13,7 +13,7 @@ steps:
 - task: AzureCLI@2
   name: RunTerraform
   inputs:
-    azureSubscription: AzureDevopsTF # The name of your service connection goes here
+    azureSubscription: Terraform Deployment Connection # The name of your service connection goes here
     scriptType: bash
     scriptLocation: inlineScript
     addSpnToEnvironment: true
