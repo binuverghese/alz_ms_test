@@ -15,6 +15,9 @@ terraform {
     }
   }
 }
+provider "azapi" {
+  # Configuration options
+}
 
 provider "azurerm" {
   features {}
