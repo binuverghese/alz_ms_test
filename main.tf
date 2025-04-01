@@ -5,6 +5,10 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 3.74"
     }
+    azapi = {
+      source  = "Azure/azapi"
+      version = "~> 1.0"
+    }
     http = {
       source  = "hashicorp/http"
       version = "~> 3.4"
@@ -15,15 +19,17 @@ terraform {
     }
   }
 }
-provider "azapi" {
-  # Configuration options
-}
 
 provider "azurerm" {
   features {}
+
   subscription_id = "82f459ea-d085-4aeb-9f3a-33f009c19cd4"
+  tenant_id       = "16b3c013-d300-468d-ac64-7eda0820b6d3"
+  use_oidc        = true  # Using OIDC for Azure DevOps Pipelines
+}
+
+provider "azapi" {
   use_oidc = true
-  tenant_id = "16b3c013-d300-468d-ac64-7eda0820b6d3"
 }
 
 # Resource Group
