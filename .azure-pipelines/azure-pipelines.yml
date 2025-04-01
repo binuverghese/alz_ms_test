@@ -1,18 +1,17 @@
-
-  trigger:
+trigger:
    branches:
      include:
        - main
  
-  pr:
+pr:
    branches:
      include:
        - main
  
-  variables:
+variables:
    - group: TerraformSecrets  # Reference stored secrets in ADO
  
-  stages:
+stages:
    - stage: Terraform_Deployment
      displayName: "Terraform Deployment"
      jobs:
@@ -81,17 +80,3 @@
                scriptLocation: "inlineScript"
                inlineScript: |
                  terraform apply -auto-approve tfplan 
-          #  - script: |
-          #     #if [ -f "tfplan" ]; then
-          #        terraform apply -auto-approve tfplan
-              #  else
-              #    echo "Terraform plan file not found. Skipping apply."
-              #    exit 1
-              #  fi
-             #displayName: "Terraform Apply"
-            #  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
-            #  env:
-            #    ARM_USE_OIDC: true
-            #    ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
-            #    ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
-            #    ARM_TENANT_ID: "$(ARM_TENANT_ID)"
