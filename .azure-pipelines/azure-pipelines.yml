@@ -28,6 +28,29 @@ stages:
             inputs:
               terraformVersion: '1.9.2'
 
+          # Retrieve OIDC Token
+          - task: AzureCLI@2
+            displayName: "Retrieve OIDC Token"
+            inputs:
+              azureSubscription: "Terraform Deployment Connection"
+              scriptType: "bash"
+              scriptLocation: "inlineScript"
+              inlineScript: |
+                echo "Fetching OIDC Token..."
+                export ARM_TENANT_ID="$(ARM_TENANT_ID)"
+                export ARM_CLIENT_ID="$(ARM_CLIENT_ID)"
+                export ARM_SUBSCRIPTION_ID="$(ARM_SUBSCRIPTION_ID)"
+                export ARM_OIDC_TOKEN=$(curl -sSL -H "Authorization: Bearer $(System.AccessToken)" \
+                  --request GET \
+                  "https://management.azure.com/.default" | jq -r '.access_token')
+
+                if [ -z "$ARM_OIDC_TOKEN" ]; then
+                  echo "Error: Failed to retrieve OIDC token"
+                  exit 1
+                fi
+
+                echo "OIDC Token successfully retrieved."
+
           # Terraform Init
           - script: |
               terraform init -input=false
@@ -37,21 +60,23 @@ stages:
               ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
               ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
               ARM_TENANT_ID: "$(ARM_TENANT_ID)"
+              ARM_OIDC_TOKEN: "$(ARM_OIDC_TOKEN)"
 
           # Terraform Validate (Checks syntax and configuration before applying)
           - script: |
               terraform validate
             displayName: "Terraform Validate"
 
-          # Terraform Plan using AzureCLI@2 Task instead of script task
-          - task: AzureCLI@2
+          # Terraform Plan
+          - script: |
+              terraform plan -out=tfplan -input=false
             displayName: "Terraform Plan"
-            inputs:
-              azureSubscription: "Terraform Deployment Connection"
-              scriptType: "bash"
-              scriptLocation: "inlineScript"
-              inlineScript: |
-                terraform plan -out=tfplan -input=false 
+            env:
+              ARM_USE_OIDC: true
+              ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
+              ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
+              ARM_TENANT_ID: "$(ARM_TENANT_ID)"
+              ARM_OIDC_TOKEN: "$(ARM_OIDC_TOKEN)"
 
           # Terraform Apply (only on main branch and if plan file exists)
           - script: |
@@ -68,3 +93,4 @@ stages:
               ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
               ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
               ARM_TENANT_ID: "$(ARM_TENANT_ID)"
+              ARM_OIDC_TOKEN: "$(ARM_OIDC_TOKEN)"
