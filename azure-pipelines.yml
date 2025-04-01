@@ -4,22 +4,84 @@
 # https://aka.ms/yaml
 
 trigger:
-- main
-
-pool:
-  vmImage: ubuntu-latest
-
-steps:
-- task: AzureCLI@2
-  name: RunTerraform
-  inputs:
-    azureSubscription: Terraform Deployment Connection # The name of your service connection goes here
-    scriptType: bash
-    scriptLocation: inlineScript
-    addSpnToEnvironment: true
-    inlineScript: |
-      export ARM_TENANT_ID="$tenantId"
-      export ARM_CLIENT_ID="$servicePrincipalId"
-      export ARM_OIDC_TOKEN="$idToken"
-      terraform init
-      terraform apply -auto-approve
+   branches:
+     include:
+       - main
+ 
+pr:
+   branches:
+     include:
+       - main
+ 
+variables:
+   - group: TerraformSecrets  # Reference stored secrets in ADO
+ 
+stages:
+   - stage: Terraform_Deployment
+     displayName: "Terraform Deployment"
+     jobs:
+       - job: Terraform_Deploy
+         displayName: "Deploy Terraform"
+         pool:
+           vmImage: 'ubuntu-latest'
+         steps:
+           - checkout: self
+ 
+           # Install Terraform
+           - task: TerraformInstaller@1
+             displayName: "Install Terraform"
+             inputs:
+               terraformVersion: '1.9.2'
+           # OIDC     
+           - task: AzureCLI@2
+             displayName: "Fetch OIDC Token"
+             inputs:
+              azureSubscription: "Terraform Deployment Connection"
+              scriptType: "bash"
+              scriptLocation: "inlineScript"
+              inlineScript: |
+                echo "Fetching OIDC Token..."
+                export ARM_OIDC_TOKEN=$(az account get-access-token --resource https://management.azure.com --query accessToken --output tsv)
+                echo "##vso[task.setvariable variable=ARM_OIDC_TOKEN;]$ARM_OIDC_TOKEN"
+                echo "##vso[task.setvariable variable=ARM_USE_OIDC;]true"
+                echo "OIDC Token fetched successfully!"
+                export ARM_TENANT_ID="$(TENANT_ID)"
+                export ARM_SUBSCRIPTION_ID="$(SUBSCRIPTION_ID)"
+                export ARM_CLIENT_ID="$(SERVICE_PRINCIPAL_ID)"
+                export ARM_OIDC_TOKEN="$(ID_TOKEN)"
+              
+          # Terraform Init
+           - script: |
+               terraform init -input=false
+             displayName: "Terraform Init"
+             env:
+               ARM_USE_OIDC: true
+               ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
+               ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
+               ARM_TENANT_ID: "$(ARM_TENANT_ID)"
+ 
+           # Terraform Validate (Checks syntax and configuration before applying)
+           - script: |
+               terraform validate
+             displayName: "Terraform Validate"
+ 
+          # Terraform Plan using AzureCLI@2 Task instead of script task
+           - task: AzureCLI@2
+             displayName: "Terraform Plan"
+             
+             inputs:
+               azureSubscription: "Terraform Deployment Connection"
+               scriptType: "bash"
+               scriptLocation: "inlineScript"
+               inlineScript: |
+                 terraform plan -out=tfplan -input=false 
+ 
+           # Terraform Apply (only on main branch and if plan file exists)
+           - task: AzureCLI@2
+             displayName: "Terraform Apply"
+             inputs:
+               azureSubscription: "Terraform Deployment Connection"
+               scriptType: "bash"
+               scriptLocation: "inlineScript"
+               inlineScript: |
+                 terraform apply -auto-approve tfplan 
