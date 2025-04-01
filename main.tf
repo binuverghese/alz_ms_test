@@ -18,13 +18,13 @@ terraform {
       version = "~> 3.5"
     }
   }
-backend "azurerm" {
-    resource_group_name   = "TestVM"   # The RG where state is stored
-    storage_account_name  = "tfstatecse"     # The storage account name
-    container_name        = "terraform"               # The container name
-    key                   = "terraform.tfstate"     # The name of the state file
-  }
-}
+#backend "azurerm" {
+    #resource_group_name   = "TestVM"   # The RG where state is stored
+    #storage_account_name  = "tfstatecse"     # The storage account name
+    #container_name        = "terraform"               # The container name
+    #key                   = "terraform.tfstate"     # The name of the state file
+  #}
+#}
 
 provider "azurerm" {
   features {}
