@@ -40,7 +40,6 @@ stages:
                 az account set --subscription "$(ARM_SUBSCRIPTION_ID)"
                 echo "Azure authentication successful!"
 
-
           # Terraform Init
           - script: |
               terraform init -input=false
@@ -64,43 +63,40 @@ stages:
               scriptType: "bash"
               scriptLocation: "inlineScript"
               inlineScript: |
-                # Ensure required variables are available
-                echo "ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)"
-                echo "RESOURCE_GROUP_NAME: $(RESOURCE_GROUP_NAME)"
-                echo "ROUTE_TABLE_NAME: $(ROUTE_TABLE_NAME)"
+                echo "Checking and importing existing resources into Terraform state..."
 
-                # Check if Resource Group exists in state
-                  if terraform state list | grep -q "azurerm_resource_group.this"; then
-                    echo "Resource Group already in Terraform state."
-                  else
-                    echo "Importing existing Resource Group..."
-                    terraform import azurerm_resource_group.this "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$(RESOURCE_GROUP_NAME)"
-                  fi
+                # Check and Import Resource Group
+                if terraform state list | grep -q "azurerm_resource_group.this"; then
+                  echo "Resource Group already in Terraform state."
+                else
+                  echo "Importing existing Resource Group..."
+                  terraform import azurerm_resource_group.this "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$(RESOURCE_GROUP_NAME)"
+                fi
 
-                # Check if Route Table exists in state
-                  if terraform state list | grep -q "azurerm_route_table.this"; then
-                    echo "Route Table already in Terraform state."
-                  else
-                    echo "Importing existing Route Table..."
-                    terraform import azurerm_route_table.this "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$(RESOURCE_GROUP_NAME)/providers/Microsoft.Network/routeTables/$(ROUTE_TABLE_NAME)"
-                  fi
+                # Check and Import Route Table
+                if terraform state list | grep -q "azurerm_route_table.this"; then
+                  echo "Route Table already in Terraform state."
+                else
+                  echo "Importing existing Route Table..."
+                  terraform import azurerm_route_table.this "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$(RESOURCE_GROUP_NAME)/providers/Microsoft.Network/routeTables/$(ROUTE_TABLE_NAME)"
+                fi
 
-                # Check if NSG and VNET exists
-                        echo "Checking if NSG is already imported..."
-                        if terraform state list | grep -q "azurerm_network_security_group.nsg"; then
-                          echo "NSG already managed in Terraform state."
-                        else
-                          echo "Importing NSG..."
-                          terraform import azurerm_network_security_group.nsg "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$(RESOURCE_GROUP_NAME)/providers/Microsoft.Network/networkSecurityGroups/$(NSG_NAME)"
-                        fi
+                # Check and Import NSG
+                if terraform state list | grep -q "azurerm_network_security_group.nsg"; then
+                  echo "NSG already in Terraform state."
+                else
+                  echo "Importing existing Network Security Group..."
+                  terraform import azurerm_network_security_group.nsg "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$(RESOURCE_GROUP_NAME)/providers/Microsoft.Network/networkSecurityGroups/$(NSG_NAME)"
+                fi
 
-                        echo "Checking if VNet is already imported..."
-                        if terraform state list | grep -q "azapi_resource.vnet"; then
-                          echo "VNet already managed in Terraform state."
-                        else
-                          echo "Importing VNet..."
-                          terraform import azapi_resource.vnet "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$(RESOURCE_GROUP_NAME)/providers/Microsoft.Network/virtualNetworks/$(VNET_NAME)"
-                        fi
+                # Check and Import VNet
+                if terraform state list | grep -q "azapi_resource.vnet"; then
+                  echo "VNet already in Terraform state."
+                else
+                  echo "Importing existing Virtual Network..."
+                  terraform import azapi_resource.vnet "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$(RESOURCE_GROUP_NAME)/providers/Microsoft.Network/virtualNetworks/$(VNET_NAME)"
+                fi
+
           # Terraform Plan
           - task: AzureCLI@2
             displayName: "Terraform Plan"
@@ -109,7 +105,7 @@ stages:
               scriptType: "bash"
               scriptLocation: "inlineScript"
               inlineScript: |
-                terraform plan -out=tfplan -input=false 
+                terraform plan -out=tfplan -input=false
 
           # Terraform Apply
           - task: AzureCLI@2
@@ -119,4 +115,4 @@ stages:
               scriptType: "bash"
               scriptLocation: "inlineScript"
               inlineScript: |
-                terraform apply -auto-approve tfplan 
+                terraform apply -auto-approve tfplan
