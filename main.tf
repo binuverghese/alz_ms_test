@@ -29,7 +29,7 @@ terraform {
 provider "azurerm" {
   features {}
    use_oidc        = true  #
-   subscription_id = "1e437fdf-bd78-431d-ba95-1498f0e84c10"
+   #subscription_id = "1e437fdf-bd78-431d-ba95-1498f0e84c10"
 }
 
 provider "azapi" {
