@@ -45,9 +45,9 @@ stages:
             displayName: "Terraform Init"
             env:
               ARM_USE_OIDC: true
-              ARM_CLIENT_ID: $(AZURE_CLIENT_ID)
-              ARM_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
-              ARM_TENANT_ID: $(AZURE_TENANT_ID)
+              ARM_CLIENT_ID: "6553f4d9-76ac-4b64-8563-b998cde6e5a1"
+              ARM_SUBSCRIPTION_ID: "82f459ea-d085-4aeb-9f3a-33f009c19cd4"
+              ARM_TENANT_ID: "82f459ea-d085-4aeb-9f3a-33f009c19cd4"
 
           # Terraform Validate (Checks syntax and configuration before applying)
           - script: |
@@ -60,9 +60,9 @@ stages:
             displayName: "Terraform Plan"
             env:
               ARM_USE_OIDC: true
-              ARM_CLIENT_ID: $(AZURE_CLIENT_ID)
-              ARM_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
-              ARM_TENANT_ID: $(AZURE_TENANT_ID)
+              ARM_CLIENT_ID: "6553f4d9-76ac-4b64-8563-b998cde6e5a1"
+              ARM_SUBSCRIPTION_ID: "82f459ea-d085-4aeb-9f3a-33f009c19cd4"
+              ARM_TENANT_ID: "82f459ea-d085-4aeb-9f3a-33f009c19cd4"
 
           # Terraform Apply (only on main branch and if plan file exists)
           - script: |
@@ -76,6 +76,6 @@ stages:
             condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
             env:
               ARM_USE_OIDC: true
-              ARM_CLIENT_ID: $(AZURE_CLIENT_ID)
-              ARM_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
-              ARM_TENANT_ID: $(AZURE_TENANT_ID)
+              ARM_CLIENT_ID: "6553f4d9-76ac-4b64-8563-b998cde6e5a1"
+              ARM_SUBSCRIPTION_ID: "82f459ea-d085-4aeb-9f3a-33f009c19cd4"
+              ARM_TENANT_ID: "82f459ea-d085-4aeb-9f3a-33f009c19cd4"
