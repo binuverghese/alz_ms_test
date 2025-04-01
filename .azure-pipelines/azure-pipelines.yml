@@ -85,7 +85,22 @@ stages:
                     terraform import azurerm_route_table.this "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$(RESOURCE_GROUP_NAME)/providers/Microsoft.Network/routeTables/$(ROUTE_TABLE_NAME)"
                   fi
 
+                # Check if NSG and VNET exists
+                        echo "Checking if NSG is already imported..."
+                        if terraform state list | grep -q "azurerm_network_security_group.nsg"; then
+                          echo "NSG already managed in Terraform state."
+                        else
+                          echo "Importing NSG..."
+                          terraform import azurerm_network_security_group.nsg "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$(RESOURCE_GROUP_NAME)/providers/Microsoft.Network/networkSecurityGroups/$(NSG_NAME)"
+                        fi
 
+                        echo "Checking if VNet is already imported..."
+                        if terraform state list | grep -q "azapi_resource.vnet"; then
+                          echo "VNet already managed in Terraform state."
+                        else
+                          echo "Importing VNet..."
+                          terraform import azapi_resource.vnet "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$(RESOURCE_GROUP_NAME)/providers/Microsoft.Network/virtualNetworks/$(VNET_NAME)"
+                        fi
           # Terraform Plan
           - task: AzureCLI@2
             displayName: "Terraform Plan"
