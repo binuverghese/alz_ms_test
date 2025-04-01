@@ -58,26 +58,33 @@ stages:
 
           # Import existing resources into Terraform state
           - task: AzureCLI@2
-            displayName: "Terraform Import (Handle Existing Resources)"
+            displayName: "Terraform Import Existing Resources"
             inputs:
               azureSubscription: "Terraform Deployment Connection"
               scriptType: "bash"
               scriptLocation: "inlineScript"
               inlineScript: |
-                # Check if state file exists
-                if terraform state list | grep -q "azurerm_resource_group.this"; then
-                  echo "Resource Group already in Terraform state."
-                else
-                  echo "Importing existing Resource Group..."
-                  terraform import azurerm_resource_group.this "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$(RESOURCE_GROUP_NAME)"
-                fi
+                # Ensure required variables are available
+                echo "ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)"
+                echo "RESOURCE_GROUP_NAME: $(RESOURCE_GROUP_NAME)"
+                echo "ROUTE_TABLE_NAME: $(ROUTE_TABLE_NAME)"
 
-                if terraform state list | grep -q "azurerm_route_table.this"; then
-                  echo "Route Table already in Terraform state."
-                else
-                  echo "Importing existing Route Table..."
-                  terraform import azurerm_route_table.this "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$(RESOURCE_GROUP_NAME)/providers/Microsoft.Network/routeTables/$(ROUTE_TABLE_NAME)"
-                fi
+                # Check if Resource Group exists in state
+                  if terraform state list | grep -q "azurerm_resource_group.this"; then
+                    echo "Resource Group already in Terraform state."
+                  else
+                    echo "Importing existing Resource Group..."
+                    terraform import azurerm_resource_group.this "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$(RESOURCE_GROUP_NAME)"
+                  fi
+
+                # Check if Route Table exists in state
+                  if terraform state list | grep -q "azurerm_route_table.this"; then
+                    echo "Route Table already in Terraform state."
+                  else
+                    echo "Importing existing Route Table..."
+                    terraform import azurerm_route_table.this "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$(RESOURCE_GROUP_NAME)/providers/Microsoft.Network/routeTables/$(ROUTE_TABLE_NAME)"
+                  fi
+
 
           # Terraform Plan
           - task: AzureCLI@2
