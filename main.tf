@@ -19,9 +19,9 @@ terraform {
     }
   }
 backend "azurerm" {
-    resource_group_name   = "rg-terraform-state"   # The RG where state is stored
-    storage_account_name  = "tfstatestorageacc"     # The storage account name
-    container_name        = "tfstate"               # The container name
+    resource_group_name   = "TestVM"   # The RG where state is stored
+    storage_account_name  = "tfstatecse"     # The storage account name
+    container_name        = "terraform"               # The container name
     key                   = "terraform.tfstate"     # The name of the state file
   }
 }
