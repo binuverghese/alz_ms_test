@@ -72,14 +72,22 @@
                  terraform plan -out=tfplan -input=false 
  
            # Terraform Apply (only on main branch and if plan file exists)
-           - script: |
-              #if [ -f "tfplan" ]; then
-                 terraform apply -auto-approve tfplan
+           - task: AzureCLI@2
+             displayName: "Terraform Apply"
+             inputs:
+               azureSubscription: "Terraform Deployment Connection"
+               scriptType: "bash"
+               scriptLocation: "inlineScript"
+               inlineScript: |
+                 terraform apply -auto-approve tfplan 
+          #  - script: |
+          #     #if [ -f "tfplan" ]; then
+          #        terraform apply -auto-approve tfplan
               #  else
               #    echo "Terraform plan file not found. Skipping apply."
               #    exit 1
               #  fi
-             displayName: "Terraform Apply"
+             #displayName: "Terraform Apply"
             #  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
             #  env:
             #    ARM_USE_OIDC: true
