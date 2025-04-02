@@ -61,6 +61,7 @@ stages:
           - task: AzureCLI@2
             displayName: "Terraform Plan"
             inputs:
+              azureSubscription: "Terraform Deployment Connection"
               scriptType: "bash"
               scriptLocation: "inlineScript"
               inlineScript: |
@@ -75,6 +76,7 @@ stages:
           - task: AzureCLI@2
             displayName: "Terraform Apply"
             inputs:
+              azureSubscription: "Terraform Deployment Connection"
               scriptType: "bash"
               scriptLocation: "inlineScript"
               inlineScript: |
