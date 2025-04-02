@@ -48,9 +48,9 @@ steps:
           -backend-config="key=terraform.tfstate"
     env:
       ARM_USE_MSI: true
-      ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"   # Managed Identity Client ID
-      ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
-      ARM_TENANT_ID: "$(ARM_TENANT_ID)"
+      ARM_CLIENT_ID: "aeb81ef1-8fe3-4430-8f67-2f6d58a6dac4"   # Managed Identity Client ID
+      ARM_SUBSCRIPTION_ID: "1e437fdf-bd78-431d-ba95-1498f0e84c10"
+      ARM_TENANT_ID: "35db3582-96af-4081-a32c-7bbaa2cf3ca9"
 
   # Step 4: Terraform Validate
   - task: AzureCLI@2
