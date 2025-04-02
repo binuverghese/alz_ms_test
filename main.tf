@@ -39,10 +39,10 @@ provider "azapi" {
 }
 
 # Resource Group
-resource "azurerm_resource_group" "this" {
-  location = var.location
-  name     = var.resource_group_name
-}
+#resource "azurerm_resource_group" "this" {
+#  location = var.location
+#  name     = var.resource_group_name
+#}
 
 # Route Table (UDR) - Parameterized
 resource "azurerm_route_table" "this" {
