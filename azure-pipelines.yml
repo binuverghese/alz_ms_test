@@ -28,19 +28,19 @@ stages:
             inputs:
               terraformVersion: '1.9.2'
 
-          # Azure CLI Login using Service Principal
+          # Azure CLI Login using Service Principal (Fix: Set Subscription)
           - task: AzureCLI@2
             displayName: "Azure Login"
             inputs:
-              azureSubscription: "Terraform Deployment Connection"
               scriptType: "bash"
               scriptLocation: "inlineScript"
               inlineScript: |
-                az login --service-principal -u $(ARM_CLIENT_ID) --tenant $(ARM_TENANT_ID)
+                az login --service-principal -u $(ARM_CLIENT_ID) -p $(ARM_CLIENT_SECRET) --tenant $(ARM_TENANT_ID)
+                az account set --subscription $(ARM_SUBSCRIPTION_ID)  # <-- Fix added here
                 az account show
                 echo "Azure CLI Authentication Successful"
 
-          # Initialize Terraform with Remote State Storage
+          # Terraform Init with Backend Configuration
           - script: |
               terraform init -backend-config="storage_account_name=tfstatedemonew" \
                             -backend-config="container_name=tfstate" \
@@ -48,23 +48,9 @@ stages:
             displayName: "Terraform Init"
             env:
               ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
-              ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
-              ARM_TENANT_ID: "$(ARM_TENANT_ID)"
-              #ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
-
-          # Import Existing Resources into Terraform State (if not already managed)
-          - script: |
-              terraform import azurerm_resource_group.this "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001" || echo "Resource Group already imported"
-              terraform import azurerm_virtual_network.vnet "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/virtualNetworks/vnet-dev-canadacentral-001" || echo "VNet already imported"
-              terraform import azurerm_network_security_group.nsg "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/networkSecurityGroups/nsg-con-001" || echo "NSG already imported"
-              terraform import azurerm_route_table.rt "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/routeTables/rt-dev-001" || echo "Route Table already imported"
-              terraform import azurerm_application_gateway.appgw "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/applicationGateways/appgw-dev-001" || echo "Application Gateway already imported"
-            displayName: "Import Existing Resources"
-            env:
-              ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
-              ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
-              ARM_TENANT_ID: "$(ARM_TENANT_ID)"
               ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
+              ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
+              ARM_TENANT_ID: "$(ARM_TENANT_ID)"
 
           # Terraform Validate
           - script: |
@@ -75,18 +61,26 @@ stages:
           - task: AzureCLI@2
             displayName: "Terraform Plan"
             inputs:
-              azureSubscription: "Terraform Deployment Connection"
               scriptType: "bash"
               scriptLocation: "inlineScript"
               inlineScript: |
                 terraform plan -out=tfplan -input=false
+            env:
+              ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
+              ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
+              ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
+              ARM_TENANT_ID: "$(ARM_TENANT_ID)"
 
-          # Terraform Apply (only on main branch and if plan file exists)
+          # Terraform Apply
           - task: AzureCLI@2
             displayName: "Terraform Apply"
             inputs:
-              azureSubscription: "Terraform Deployment Connection"
               scriptType: "bash"
               scriptLocation: "inlineScript"
               inlineScript: |
                 terraform apply -auto-approve tfplan
+            env:
+              ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
+              ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
+              ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
+              ARM_TENANT_ID: "$(ARM_TENANT_ID)"
