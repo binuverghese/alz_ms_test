@@ -32,7 +32,7 @@ stages:
            - task: AzureCLI@2
              displayName: "Fetch OIDC Token"
              inputs:
-              azureSubscription: "TestAzureDevopsTF"
+              azureSubscription: "Terraform Deployment Connection"
               scriptType: "bash"
               scriptLocation: "inlineScript"
               inlineScript: |
@@ -55,7 +55,7 @@ stages:
            - task: AzureCLI@2
              displayName: "Test OIDC Token"
              inputs:
-               azureSubscription: "TestAzureDevopsTF"
+               azureSubscription: "Terraform Deployment Connection"
                scriptType: "bash"
                scriptLocation: "inlineScript"
                inlineScript: |
@@ -64,20 +64,20 @@ stages:
                  echo "OIDC Token (First 50 chars): ${TOKEN:0:50}..."
                   
                  if [ -z "$TOKEN" ]; then
-                   echo "❌ ERROR: OIDC Token is empty!"
+                   echo "ERROR: OIDC Token is empty!"
                    exit 1
                  else
-                   echo "✅ OIDC Token successfully retrieved!"
+                   echo "OIDC Token successfully retrieved!"
                  fi
 
-                 echo "🔍 Decoding JWT for validation..."
+                 echo "Decoding JWT for validation..."
                  echo "$TOKEN" | awk -F"." '{print $2}' | base64 -d | jq .
   
            # Debug Azure Authentication
            - task: AzureCLI@2
              displayName: "Debug Azure Authentication"
              inputs:
-              azureSubscription: "TestAzureDevopsTF"
+              azureSubscription: "Terraform Deployment Connection"
               scriptType: "bash"
               scriptLocation: "inlineScript"
               inlineScript: |
@@ -105,7 +105,7 @@ stages:
            - task: AzureCLI@2
              displayName: "Terraform Plan"
              inputs:
-               azureSubscription: "TestAzureDevopsTF"
+               azureSubscription: "Terraform Deployment Connection"
                scriptType: "bash"
                scriptLocation: "inlineScript"
                inlineScript: |
@@ -115,7 +115,7 @@ stages:
            - task: AzureCLI@2
              displayName: "Terraform Apply"
              inputs:
-               azureSubscription: "TestAzureDevopsTF"
+               azureSubscription: "Terraform Deployment Connection"
                scriptType: "bash"
                scriptLocation: "inlineScript"
                inlineScript: |
