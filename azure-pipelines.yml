@@ -55,7 +55,7 @@ stages:
               scriptType: "bash"
               scriptLocation: "inlineScript"
               inlineScript: |
-                RG_EXISTS=$(az group exists --name rg-dev-001)
+                RG_EXISTS=$(az group exists --name $(TF_RESOURCE_GROUP))
                 if [ "$RG_EXISTS" = "true" ]; then
                   echo "Resource Group already exists. Importing into Terraform..."
                   terraform import azurerm_resource_group.this /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$(TF_RESOURCE_GROUP)
