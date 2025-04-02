@@ -14,7 +14,7 @@ pr:
        - main
  
 variables:
-   - group: TerraformSecrets  # Reference stored secrets in ADO
+   - group: Terraformsecrets  # Reference stored secrets in ADO
  
 stages:
    - stage: Terraform_Deployment
