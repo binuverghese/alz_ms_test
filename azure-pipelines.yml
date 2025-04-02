@@ -61,6 +61,16 @@ stages:
                  az login --identity
                  az account show
 
+           - task: AzureCLI@2
+             displayName: "Debug Azure Authentication"
+             inputs:
+              azureSubscription: "Terraform Deployment Connection"
+              scriptType: "bash"
+              scriptLocation: "inlineScript"
+              inlineScript: |
+                echo "Checking Azure authentication..."
+                az account show --output table || echo "Failed to authenticate!"
+
           # Terraform Init
            - script: |
                terraform init -input=false
