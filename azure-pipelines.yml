@@ -1,4 +1,4 @@
-trigger:
+trigger: 
   branches:
     include:
       - main
@@ -28,7 +28,7 @@ stages:
             inputs:
               terraformVersion: '1.9.2'
 
-          # Terraform Init
+          # Terraform Init with Azure AD Authentication
           - task: AzureCLI@2
             displayName: "Terraform Init"
             inputs:
@@ -40,7 +40,8 @@ stages:
                   -backend-config="resource_group_name=$(TF_RESOURCE_GROUP)" \
                   -backend-config="storage_account_name=$(TF_STORAGE_ACCOUNT)" \
                   -backend-config="container_name=$(TF_CONTAINER_NAME)" \
-                  -backend-config="key=terraform.tfstate"
+                  -backend-config="key=terraform.tfstate" \
+                  -backend-config="use_azuread_auth=true"
             env:
               ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
               ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
