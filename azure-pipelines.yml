@@ -1,88 +1,85 @@
 trigger:
-  - main
-
-pool:
-  vmImage: 'ubuntu-latest'
-
+  branches:
+    include:
+      - main
+ 
+pr:
+  branches:
+    include:
+      - main
+ 
 variables:
-  AZURE_SUBSCRIPTION: 'Terraform Deployment Connection'
-  TF_VERSION: '1.9.2'
-  RESOURCE_GROUP: 'rg-dev-001'
-  STORAGE_ACCOUNT: 'tfstatedemonew'
-  CONTAINER_NAME: 'tfstate'
-  LOCATION: 'Canada Central'
-  ARM_SUBSCRIPTION_ID: "1e437fdf-bd78-431d-ba95-1498f0e84c10"
-  ARM_TENANT_ID: "35db3582-96af-4081-a32c-7bbaa2cf3ca9"
-  ARM_CLIENT_ID: "aeb81ef1-8fe3-4430-8f67-2f6d58a6dac4"
-
-steps:
-  - task: TerraformInstaller@1
-    displayName: 'Install Terraform'
-    inputs:
-      terraformVersion: $(TF_VERSION)
-
-  - task: AzureCLI@2
-    displayName: 'Login to Azure using Managed Identity'
-    inputs:
-      azureSubscription: $(AZURE_SUBSCRIPTION)
-      scriptType: 'bash'
-      scriptLocation: 'inlineScript'
-      inlineScript: |
-        echo "Logging into Azure using Managed Identity..."
-        az login --identity --client-id "$(ARM_CLIENT_ID)"
-        az account show
-
-  - task: AzureCLI@2
-    displayName: "Terraform Init"
-    inputs:
-      azureSubscription: $(AZURE_SUBSCRIPTION)
-      scriptType: "bash"
-      scriptLocation: "inlineScript"
-      inlineScript: |
-        terraform init -input=false \
-          -backend-config="resource_group_name=$(RESOURCE_GROUP)" \
-          -backend-config="storage_account_name=$(STORAGE_ACCOUNT)" \
-          -backend-config="container_name=$(CONTAINER_NAME)" \
-          -backend-config="key=terraform.tfstate" \
-          -backend-config="use_azuread_auth=true"
-    env:
-      ARM_USE_MSI: "true"
-      ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
-      ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
-      ARM_TENANT_ID: "$(ARM_TENANT_ID)"
-      AZURE_CLIENT_ID: "$(ARM_CLIENT_ID)"
-      AZURE_TENANT_ID: "$(ARM_TENANT_ID)"
-      AZURE_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
-
-  - task: AzureCLI@2
-    displayName: "Terraform Validate"
-    inputs:
-      azureSubscription: $(AZURE_SUBSCRIPTION)
-      scriptType: "bash"
-      scriptLocation: "inlineScript"
-      inlineScript: |
-        terraform validate
-
-  - task: AzureCLI@2
-    displayName: "Terraform Plan"
-    inputs:
-      azureSubscription: $(AZURE_SUBSCRIPTION)
-      scriptType: "bash"
-      scriptLocation: "inlineScript"
-      inlineScript: |
-        terraform plan -out=tfplan -input=false
-
-  - task: AzureCLI@2
-    displayName: "Terraform Apply"
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
-    inputs:
-      azureSubscription: $(AZURE_SUBSCRIPTION)
-      scriptType: "bash"
-      scriptLocation: "inlineScript"
-      inlineScript: |
-        if [ -f tfplan ]; then
-          terraform apply -auto-approve tfplan
-        else
-          echo "Terraform plan file not found. Skipping apply."
-          exit 1
-        fi
+  - group: TerraformSecrets  # Reference stored secrets in ADO
+ 
+stages:
+  - stage: Terraform_Deployment
+    displayName: "Terraform Deployment"
+    jobs:
+      - job: Terraform_Deploy
+        displayName: "Deploy Terraform"
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - checkout: self
+ 
+          # Install Terraform
+          - task: TerraformInstaller@1
+            displayName: "Install Terraform"
+            inputs:
+              terraformVersion: '1.9.2'
+ 
+          # # Fetch OIDC Token
+          # - task: AzureCLI@2
+          #   displayName: "Fetch OIDC Token"
+          #   inputs:
+          #     azureSubscription: "Terraform Deployment Connection"
+          #     scriptType: "bash"
+          #     scriptLocation: "inlineScript"
+          #     inlineScript: |
+          #       echo "Fetching OIDC Token..."
+          #       export ARM_OIDC_TOKEN=$(az account get-access-token --resource https://management.azure.com --query accessToken --output tsv)
+          #       echo "##vso[task.setvariable variable=ARM_OIDC_TOKEN;]$ARM_OIDC_TOKEN"
+          #       echo "##vso[task.setvariable variable=ARM_USE_OIDC;]true"
+          #       echo "OIDC Token fetched successfully!"
+ 
+          # Terraform Init
+          - task: AzureCLI@2
+            displayName: "Terraform Init"
+            inputs:
+              azureSubscription: "Terraform Deployment Connection"
+              scriptType: "bash"
+              scriptLocation: "inlineScript"
+              inlineScript: |
+                terraform init -input=false
+            # env:
+            #   ARM_USE_OIDC: true
+            #   ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
+            #   ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
+            #   ARM_TENANT_ID: "$(ARM_TENANT_ID)"
+ 
+          # Terraform Validate (Checks syntax and configuration before applying)
+          - script: |
+              terraform validate
+            displayName: "Terraform Validate"
+ 
+          # Terraform Plan using AzureCLI@2 Task instead of script task
+          - task: AzureCLI@2
+            displayName: "Terraform Plan"
+            inputs:
+              azureSubscription: "Terraform Deployment Connection"
+              scriptType: "bash"
+              scriptLocation: "inlineScript"
+              inlineScript: |
+                terraform plan -out=tfplan -input=false
+ 
+          # Terraform Apply (only on main branch and if plan file exists)
+          - task: AzureCLI@2
+            displayName: "Terraform Apply"
+            inputs:
+              azureSubscription: "Terraform Deployment Connection"
+              scriptType: "bash"
+              scriptLocation: "inlineScript"
+              inlineScript: |
+                terraform apply -auto-approve tfplan
+ 
+ 
