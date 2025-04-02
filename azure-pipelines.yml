@@ -42,7 +42,7 @@ stages:
 
           # Initialize Terraform (with Backend Config)
           - script: |
-              terraform init -backend-config="storage_account_name=$(TF_STORAGE_ACCOUNT)" -backend-config="container_name=$(TF_CONTAINER_NAME)" -backend-config="key=$(TF_STATE_KEY)"
+              terraform init -backend-config="storage_account_name=tfstatedemonew" -backend-config="container_name=tfstate" -backend-config="key=$(TF_STATE_KEY)"
             displayName: "Terraform Init"
             env:
               ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
