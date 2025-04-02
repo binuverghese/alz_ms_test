@@ -47,6 +47,21 @@ stages:
               ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
               ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
               ARM_TENANT_ID: "$(ARM_TENANT_ID)"
+#         # Check if Resource Group exists & Import it (Prevents TF Apply Failure)
+          - task: AzureCLI@2
+            displayName: "Check & Import Existing Resource Group"
+            inputs:
+              azureSubscription: "Terraform Deployment Connection_1"
+              scriptType: "bash"
+              scriptLocation: "inlineScript"
+              inlineScript: |
+                RG_EXISTS=$(az group exists --name $(TF_RESOURCE_GROUP))
+                if [ "$RG_EXISTS" = "true" ]; then
+                  echo "Resource Group already exists. Importing into Terraform..."
+                  terraform import azurerm_resource_group.this /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$(TF_RESOURCE_GROUP)
+                else
+                  echo "Resource Group does not exist. Terraform will create it."
+                fi
 
           # Terraform Validate
           - script: |
