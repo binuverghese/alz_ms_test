@@ -5,7 +5,7 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  AZURE_SUBSCRIPTION: 'Terraform Deployment Connection'  # Azure DevOps Service Connection Name
+  AZURE_SUBSCRIPTION: 'Terraform Deployment Connection'
   TF_VERSION: '1.9.2'
   RESOURCE_GROUP: 'rg-dev-001'
   STORAGE_ACCOUNT: 'tfstatedemonew'
@@ -13,16 +13,14 @@ variables:
   LOCATION: 'Canada Central'
   ARM_SUBSCRIPTION_ID: "1e437fdf-bd78-431d-ba95-1498f0e84c10"
   ARM_TENANT_ID: "35db3582-96af-4081-a32c-7bbaa2cf3ca9"
-  ARM_CLIENT_ID: "aeb81ef1-8fe3-4430-8f67-2f6d58a6dac4"  # If using User-Assigned Managed Identity
+  ARM_CLIENT_ID: "aeb81ef1-8fe3-4430-8f67-2f6d58a6dac4"
 
 steps:
-  # Step 1: Install Terraform
   - task: TerraformInstaller@1
     displayName: 'Install Terraform'
     inputs:
       terraformVersion: $(TF_VERSION)
 
-  # Step 2: Login to Azure using Managed Identity
   - task: AzureCLI@2
     displayName: 'Login to Azure using Managed Identity'
     inputs:
@@ -31,10 +29,9 @@ steps:
       scriptLocation: 'inlineScript'
       inlineScript: |
         echo "Logging into Azure using Managed Identity..."
-        az login --identity --username "aeb81ef1-8fe3-4430-8f67-2f6d58a6dac4"  # Ensure this is the correct MSI
+        az login --identity --client-id "$(ARM_CLIENT_ID)"
         az account show
 
-  # Step 3: Terraform Init with Managed Identity
   - task: AzureCLI@2
     displayName: "Terraform Init"
     inputs:
@@ -47,14 +44,16 @@ steps:
           -backend-config="storage_account_name=$(STORAGE_ACCOUNT)" \
           -backend-config="container_name=$(CONTAINER_NAME)" \
           -backend-config="key=terraform.tfstate" \
-          -backend-config="use_msi=true"
+          -backend-config="use_azuread_auth=true"
     env:
       ARM_USE_MSI: "true"
-      ARM_CLIENT_ID: "aeb81ef1-8fe3-4430-8f67-2f6d58a6dac4"
-      ARM_SUBSCRIPTION_ID: "1e437fdf-bd78-431d-ba95-1498f0e84c10"
-      ARM_TENANT_ID: "35db3582-96af-4081-a32c-7bbaa2cf3ca9"
+      ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
+      ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
+      ARM_TENANT_ID: "$(ARM_TENANT_ID)"
+      AZURE_CLIENT_ID: "$(ARM_CLIENT_ID)"
+      AZURE_TENANT_ID: "$(ARM_TENANT_ID)"
+      AZURE_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
 
-  # Step 4: Terraform Validate
   - task: AzureCLI@2
     displayName: "Terraform Validate"
     inputs:
@@ -64,7 +63,6 @@ steps:
       inlineScript: |
         terraform validate
 
-  # Step 5: Terraform Plan
   - task: AzureCLI@2
     displayName: "Terraform Plan"
     inputs:
@@ -74,7 +72,6 @@ steps:
       inlineScript: |
         terraform plan -out=tfplan -input=false
 
-  # Step 6: Terraform Apply (Only on main branch and if plan file exists)
   - task: AzureCLI@2
     displayName: "Terraform Apply"
     condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
