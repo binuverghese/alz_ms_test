@@ -52,7 +52,27 @@ stages:
                 echo "##vso[task.setvariable variable=ARM_TENANT_ID;]$(TENANT_ID)"
                 echo "##vso[task.setvariable variable=ARM_SUBSCRIPTION_ID;]$(SUBSCRIPTION_ID)"
                 echo "##vso[task.setvariable variable=ARM_CLIENT_ID;]$(SERVICE_PRINCIPAL_ID)"
+           - task: AzureCLI@2
+             displayName: "Test OIDC Token"
+             inputs:
+               azureSubscription: "Terraform Deployment Connection"
+               scriptType: "bash"
+               scriptLocation: "inlineScript"
+               inlineScript: |
+                 echo "Testing OIDC Token..."
+                 TOKEN="$(az account get-access-token --resource https://management.azure.com --query accessToken --output tsv)"
+                 echo "OIDC Token (First 50 chars): ${TOKEN:0:50}..."
+                  
+                 if [ -z "$TOKEN" ]; then
+                   echo "❌ ERROR: OIDC Token is empty!"
+                   exit 1
+                 else
+                   echo "✅ OIDC Token successfully retrieved!"
+                 fi
 
+                 echo "🔍 Decoding JWT for validation..."
+                 echo "$TOKEN" | awk -F"." '{print $2}' | base64 -d | jq .
+  
            # Debug Azure Authentication
            - task: AzureCLI@2
              displayName: "Debug Azure Authentication"
