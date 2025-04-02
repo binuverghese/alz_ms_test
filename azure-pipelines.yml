@@ -50,6 +50,17 @@ stages:
                 export ARM_CLIENT_ID="$(SERVICE_PRINCIPAL_ID)"
                 export ARM_OIDC_TOKEN="$(ID_TOKEN)"
               
+           - task: AzureCLI@2
+             displayName: "Debug Authentication"
+             inputs:
+              azureSubscription: "Terraform Deployment Connection"
+              scriptType: "bash"
+              scriptLocation: "inlineScript"
+              inlineScript: |
+                 echo "Testing Azure authentication..."
+                 az login --identity
+                 az account show
+
           # Terraform Init
            - script: |
                terraform init -input=false
