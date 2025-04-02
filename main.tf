@@ -28,10 +28,10 @@ backend "azurerm" {
 
 provider "azurerm" {
   features {}
-   use_msi        = true  #
+   #use_msi        = true  #
    subscription_id = "1e437fdf-bd78-431d-ba95-1498f0e84c10"
    tenant_id       = "35db3582-96af-4081-a32c-7bbaa2cf3ca9"
-   #client_id       = "879f6aaa-ccb8-47de-9311-50a1c516a55a"
+   client_id       = "ec375efa-27ef-4631-834f-05ddec12a417"
 }
 
 provider "azapi" {
