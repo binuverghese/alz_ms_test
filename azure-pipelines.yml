@@ -28,11 +28,11 @@ stages:
             inputs:
               terraformVersion: '1.9.2'
 
-          # Azure CLI Login
+          # Azure CLI Login using Service Principal
           - task: AzureCLI@2
             displayName: "Azure Login"
             inputs:
-              azureSubscription: "Terraform Deployment Connection"  # Ensure this matches the service connection name
+              azureSubscription: "Terraform Deployment Connection"
               scriptType: "bash"
               scriptLocation: "inlineScript"
               inlineScript: |
@@ -40,9 +40,11 @@ stages:
                 az account show
                 echo "Azure CLI Authentication Successful"
 
-          # Initialize Terraform (with Backend Config)
+          # Initialize Terraform with Remote State Storage
           - script: |
-              terraform init -backend-config="storage_account_name=tfstatedemonew" -backend-config="container_name=tfstate" -backend-config="key=$(TF_STATE_KEY)"
+              terraform init -backend-config="storage_account_name=tfstatedemonew" \
+                            -backend-config="container_name=tfstate" \
+                            -backend-config="key=$(TF_STATE_KEY)"
             displayName: "Terraform Init"
             env:
               ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
@@ -50,10 +52,14 @@ stages:
               ARM_TENANT_ID: "$(ARM_TENANT_ID)"
               ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
 
-          # Import Existing Resource (if it exists in Azure and needs to be imported into Terraform state)
+          # Import Existing Resources into Terraform State (if not already managed)
           - script: |
-              terraform import azurerm_resource_group.this /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001 || echo "Resource already imported"
-            displayName: "Import Existing Resource Group"
+              terraform import azurerm_resource_group.this "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001" || echo "Resource Group already imported"
+              terraform import azurerm_virtual_network.vnet "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/virtualNetworks/vnet-dev-canadacentral-001" || echo "VNet already imported"
+              terraform import azurerm_network_security_group.nsg "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/networkSecurityGroups/nsg-con-001" || echo "NSG already imported"
+              terraform import azurerm_route_table.rt "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/routeTables/rt-dev-001" || echo "Route Table already imported"
+              terraform import azurerm_application_gateway.appgw "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/applicationGateways/appgw-dev-001" || echo "Application Gateway already imported"
+            displayName: "Import Existing Resources"
             env:
               ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
               ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
