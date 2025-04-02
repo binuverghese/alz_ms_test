@@ -28,57 +28,44 @@ stages:
             inputs:
               terraformVersion: '1.9.2'
 
-          # Azure CLI Login using Service Principal
+          # Azure CLI Login
           - task: AzureCLI@2
             displayName: "Azure Login"
             inputs:
-              azureSubscription: "Terraform Deployment Connection"  # Service Connection to authenticate with Azure
+              azureSubscription: "Terraform Deployment Connection"  # Ensure this matches the service connection name
               scriptType: "bash"
               scriptLocation: "inlineScript"
               inlineScript: |
-                echo "Logging in with Service Principal..."
                 az login --service-principal -u $(ARM_CLIENT_ID) -p $(ARM_CLIENT_SECRET) --tenant $(ARM_TENANT_ID)
                 az account show
                 echo "Azure CLI Authentication Successful"
 
-          # Terraform Init
+          # Initialize Terraform (with Backend Config)
           - script: |
-              terraform init -input=false
+              terraform init -backend-config="storage_account_name=$(TF_STORAGE_ACCOUNT)" -backend-config="container_name=$(TF_CONTAINER_NAME)" -backend-config="key=$(TF_STATE_KEY)"
             displayName: "Terraform Init"
             env:
               ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
-              ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
-              ARM_TENANT_ID: "$(ARM_TENANT_ID)"
               ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
+              ARM_TENANT_ID: "$(ARM_TENANT_ID)"
+              ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
 
-          # Terraform Validate (Check syntax and configuration before applying)
+          # Import Existing Resource (if it exists in Azure and needs to be imported into Terraform state)
+          - script: |
+              terraform import azurerm_resource_group.this /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001 || echo "Resource already imported"
+            displayName: "Import Existing Resource Group"
+            env:
+              ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
+              ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
+              ARM_TENANT_ID: "$(ARM_TENANT_ID)"
+              ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
+
+          # Terraform Validate
           - script: |
               terraform validate
             displayName: "Terraform Validate"
 
-          # Check if Resource Exists (Example: Network Security Group)
-          - task: AzureCLI@2
-            displayName: "Check if Resource Exists"
-            inputs:
-              azureSubscription: "Terraform Deployment Connection"
-              scriptType: "bash"
-              scriptLocation: "inlineScript"
-              inlineScript: |
-                RESOURCE_GROUP="rg-dev-001"
-                RESOURCE_NAME="nsg-dev-001"
-                RESOURCE_TYPE="Microsoft.Network/networkSecurityGroups"
-                
-                # Check if resource exists
-                echo "Checking if resource exists..."
-                EXISTING_RESOURCE=$(az resource show --name $RESOURCE_NAME --resource-group $RESOURCE_GROUP --resource-type $RESOURCE_TYPE --query "id" --output tsv)
-
-                if [ -z "$EXISTING_RESOURCE" ]; then
-                  echo "Resource does not exist, proceeding with creation."
-                else
-                  echo "Resource already exists: $EXISTING_RESOURCE"
-                fi
-
-          # Terraform Plan using AzureCLI@2 Task instead of script task
+          # Terraform Plan
           - task: AzureCLI@2
             displayName: "Terraform Plan"
             inputs:
