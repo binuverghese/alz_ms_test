@@ -77,7 +77,7 @@ stages:
            - task: AzureCLI@2
              displayName: "Debug Azure Authentication"
              inputs:
-              azureSubscription: "Terraform Deployment Connection"
+              azureSubscription: "Terraform Deployment Connection_1"
               scriptType: "bash"
               scriptLocation: "inlineScript"
               inlineScript: |
@@ -105,7 +105,7 @@ stages:
            - task: AzureCLI@2
              displayName: "Terraform Plan"
              inputs:
-               azureSubscription: "Terraform Deployment Connection"
+               azureSubscription: "Terraform Deployment Connection_1"
                scriptType: "bash"
                scriptLocation: "inlineScript"
                inlineScript: |
@@ -115,7 +115,7 @@ stages:
            - task: AzureCLI@2
              displayName: "Terraform Apply"
              inputs:
-               azureSubscription: "Terraform Deployment Connection"
+               azureSubscription: "Terraform Deployment Connection_1"
                scriptType: "bash"
                scriptLocation: "inlineScript"
                inlineScript: |
