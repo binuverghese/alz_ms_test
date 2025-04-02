@@ -1,88 +1,90 @@
 trigger:
-  branches:
-    include:
-      - main
+  - main
 
-pr:
-  branches:
-    include:
-      - main
+pool:
+  vmImage: 'ubuntu-latest'
 
 variables:
-  - group: TerraformSecrets  # Reference stored secrets in ADO
+  AZURE_SUBSCRIPTION: 'Terraform Deployment Connection'  # Replace with your service connection name
+  TF_VERSION: '1.9.2'  # Specify Terraform version
+  RESOURCE_GROUP: 'rg-dev-001'
+  STORAGE_ACCOUNT: 'tfstatedemonew'
+  CONTAINER_NAME: 'tfstate'
+  LOCATION: 'Canada Central'
 
-stages:
-  - stage: Terraform_Deployment
-    displayName: "Terraform Deployment"
-    jobs:
-      - job: Terraform_Deploy
-        displayName: "Deploy Terraform"
-        pool:
-          vmImage: 'ubuntu-latest'
-        steps:
-          - checkout: self
+steps:
+  # Step 1: Install Terraform
+  - task: TerraformInstaller@1
+    displayName: 'Install Terraform'
+    inputs:
+      terraformVersion: $(TF_VERSION)
 
-          # Install Terraform
-          - task: TerraformInstaller@1
-            displayName: "Install Terraform"
-            inputs:
-              terraformVersion: '1.9.2'
+  # Step 2: Login to Azure using Managed Identity
+  - task: AzureCLI@2
+    displayName: 'Login to Azure using Managed Identity'
+    inputs:
+      azureSubscription: $(AZURE_SUBSCRIPTION)
+      scriptType: 'bash'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        echo "Logging into Azure using Managed Identity..."
+        az login --identity
+        az account show
 
-          # Azure CLI Login using Service Principal (Fix: Set Subscription)
-          - task: AzureCLI@2
-            displayName: "Azure Login"
-            inputs:
-              scriptType: "bash"
-              scriptLocation: "inlineScript"
-              inlineScript: |
-                az login --service-principal -u $(ARM_CLIENT_ID) -p $(ARM_CLIENT_SECRET) --tenant $(ARM_TENANT_ID)
-                az account set --subscription $(ARM_SUBSCRIPTION_ID)  # <-- Fix added here
-                az account show
-                echo "Azure CLI Authentication Successful"
+  
 
-          # Terraform Init with Backend Configuration
-          - script: |
-              terraform init -backend-config="storage_account_name=tfstatedemonew" \
-                            -backend-config="container_name=tfstate" \
-                            -backend-config="key=$(TF_STATE_KEY)"
-            displayName: "Terraform Init"
-            env:
-              ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
-              ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
-              ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
-              ARM_TENANT_ID: "$(ARM_TENANT_ID)"
+  # Step 3: Terraform Init with Managed Identity
+  - task: AzureCLI@2
+    displayName: "Terraform Init"
+    inputs:
+      azureSubscription: $(AZURE_SUBSCRIPTION)
+      scriptType: "bash"
+      scriptLocation: "inlineScript"
+      inlineScript: |
+        terraform init -input=false \
+          -backend-config="resource_group_name=$(RESOURCE_GROUP)" \
+          -backend-config="storage_account_name=$(STORAGE_ACCOUNT)" \
+          -backend-config="container_name=$(CONTAINER_NAME)" \
+          -backend-config="key=terraform.tfstate"
+    env:
+      ARM_USE_MSI: true
+      ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"   # Managed Identity Client ID
+      ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
+      ARM_TENANT_ID: "$(ARM_TENANT_ID)"
 
-          # Terraform Validate
-          - script: |
-              terraform validate
-            displayName: "Terraform Validate"
+  # Step 4: Terraform Validate
+  - task: AzureCLI@2
+    displayName: "Terraform Validate"
+    inputs:
+      azureSubscription: $(AZURE_SUBSCRIPTION)
+      scriptType: "bash"
+      scriptLocation: "inlineScript"
+      inlineScript: |
+        terraform validate
 
-          # Terraform Plan
-          - task: AzureCLI@2
-            displayName: "Terraform Plan"
-            inputs:
-              azureSubscription: "Terraform Deployment Connection"
-              scriptType: "bash"
-              scriptLocation: "inlineScript"
-              inlineScript: |
-                terraform plan -out=tfplan -input=false
-            env:
-              ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
-              ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
-              ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
-              ARM_TENANT_ID: "$(ARM_TENANT_ID)"
+  # Step 5: Terraform Plan
+  - task: AzureCLI@2
+    displayName: "Terraform Plan"
+    inputs:
+      azureSubscription: $(AZURE_SUBSCRIPTION)
+      scriptType: "bash"
+      scriptLocation: "inlineScript"
+      inlineScript: |
+        terraform plan -out=tfplan -input=false
 
-          # Terraform Apply
-          - task: AzureCLI@2
-            displayName: "Terraform Apply"
-            inputs:
-              azureSubscription: "Terraform Deployment Connection"
-              scriptType: "bash"
-              scriptLocation: "inlineScript"
-              inlineScript: |
-                terraform apply -auto-approve tfplan
-            env:
-              ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
-              ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
-              ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
-              ARM_TENANT_ID: "$(ARM_TENANT_ID)"
+  # Step 6: Terraform Apply (Only on main branch and if plan file exists)
+  - task: AzureCLI@2
+    displayName: "Terraform Apply"
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    inputs:
+      azureSubscription: $(AZURE_SUBSCRIPTION)
+      scriptType: "bash"
+      scriptLocation: "inlineScript"
+      inlineScript: |
+        if [ -f tfplan ]; then
+          terraform apply -auto-approve tfplan
+        else
+          echo "Terraform plan file not found. Skipping apply."
+          exit 1
+        fi
+ 
