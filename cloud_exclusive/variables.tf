@@ -10,6 +10,11 @@ variable "dns_servers" {}
 variable "storage_account_id" {}
 variable "log_analytics_workspace_id" {}
 
+variable "nsg_name" {
+  description = "The name of the Network Security Group"
+  type        = string
+}
+
 # Parameterizing Route Table `next_hop_type`
 variable "next_hop_type" {
   description = "Type of next hop (e.g., VirtualAppliance, Internet, VnetLocal)"
