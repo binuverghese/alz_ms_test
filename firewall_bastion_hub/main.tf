@@ -14,19 +14,19 @@ terraform {
 
 provider "azurerm" {
   features {}
-  subscription_id = "82f459ea-d085-4aeb-9f3a-33f009c19cd4"
+  subscription_id = "1e437fdf-bd78-431d-ba95-1498f0e84c10"
 }
 
 # Providers with Aliases
 provider "azurerm" {
   alias           = "hub"
-  subscription_id = "82f459ea-d085-4aeb-9f3a-33f009c19cd4"
+  subscription_id = "1e437fdf-bd78-431d-ba95-1498f0e84c10"
   features {}
 }
 
 provider "azurerm" {
   alias           = "spoke"
-  subscription_id = "82f459ea-d085-4aeb-9f3a-33f009c19cd4"
+  subscription_id = "1e437fdf-bd78-431d-ba95-1498f0e84c10"
   features {}
 }
 
