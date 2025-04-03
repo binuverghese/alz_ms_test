@@ -18,22 +18,22 @@ routes = [
   {
     name           = "Internet"
     address_prefix = "0.0.0.0/0"
-    next_hop_ip    = "10.0.0.4"
+    next_hop_ip    = "none"
   },
   {
     name           = "Hub"
     address_prefix = "10.0.0.0/24"
-    next_hop_ip    = "10.0.0.4"
+    next_hop_ip    = "none"
   },
   {
     name           = "Spokes"
     address_prefix = "10.1.0.0/16"
-    next_hop_ip    = "10.0.0.4"
+    next_hop_ip    = "none"
   },
   {
     name           = "On-Prem"
     address_prefix = "192.168.0.0/16"
-    next_hop_ip    = "10.0.0.4"
+    next_hop_ip    = "none"
   }
 ]
 
