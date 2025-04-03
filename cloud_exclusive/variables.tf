@@ -7,7 +7,7 @@ variable "subnet_address_prefixes" {}
 variable "address_space_vnet1" {}
 variable "enable_vm_protection" {}
 variable "dns_servers" {}
-variable "storage_account_id" {}
+variable "storage_account_id" {"/subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-001/providers/Microsoft.Storage/storageAccounts/vnetlogssa"}
 variable "log_analytics_workspace_id" {}
 
 variable "nsg_name" {
