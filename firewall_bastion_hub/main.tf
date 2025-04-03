@@ -32,10 +32,10 @@ provider "azurerm" {
 }
 
 # Resource Group
-#resource "azurerm_resource_group" "this" {
-#location = "Canada Central"
-#name     = "rg-dev-001"
-#}
+resource "azurerm_resource_group" "this" {
+location = "Canada Central"
+name     = "rg-dev-001"
+}
 
 # Naming module
 module "naming" {
