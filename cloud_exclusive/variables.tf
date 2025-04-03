@@ -15,6 +15,18 @@ variable "nsg_name" {
   type        = string
 }
 
+variable "storage_account_id" {
+  description = "The ID of the storage account"
+  type        = string
+  default     = "<default-storage-account-id>" # Replace if needed
+}
+
+variable "log_analytics_workspace_id" {
+  description = "The ID of the Log Analytics Workspace"
+  type        = string
+  default     = "<default-log-analytics-id>" # Replace if needed
+}
+
 # Parameterizing Route Table `next_hop_type`
 variable "next_hop_type" {
   description = "Type of next hop (e.g., VirtualAppliance, Internet, VnetLocal)"
