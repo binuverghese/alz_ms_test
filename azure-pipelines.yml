@@ -27,10 +27,15 @@ stages:
         steps:
           - checkout: self
 
-          - script: ls -la $(Build.SourcesDirectory)
+          # Debug: List Available Folders
+          - script: |
+              echo "Build.SourcesDirectory: $(Build.SourcesDirectory)"
+              ls -la $(Build.SourcesDirectory)
             displayName: "Debug: List Available Folders"
 
+          # Debug: Verify if the folder exists
           - script: |
+              echo "Checking folder existence at $(Build.SourcesDirectory)/${{ parameters.folderName }}"
               if [ -d "$(Build.SourcesDirectory)/${{ parameters.folderName }}" ]; then
                 echo "Folder exists!"
               else
@@ -39,10 +44,13 @@ stages:
               fi
             displayName: "Verify Folder Exists"
 
+          # Debug: Navigate to Folder
           - script: |
+              echo "Navigating to folder: $(Build.SourcesDirectory)/${{ parameters.folderName }}"
               cd $(Build.SourcesDirectory)/${{ parameters.folderName }} || exit 1
               ls -la
             displayName: "Navigate to Selected Folder"
+
 
   - stage: Terraform_Deployment
     displayName: "Terraform Deployment"
