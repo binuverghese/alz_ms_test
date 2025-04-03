@@ -1,63 +1,57 @@
-variable "location" {
+variable "location" {}
+variable "resource_group_name" {}
+variable "route_table_name" {}
+variable "vnet_name" {}
+variable "subnet_name" {}
+variable "subnet_address_prefixes" {}
+variable "address_space_vnet1" {}
+variable "enable_vm_protection" {}
+variable "dns_servers" {}
+variable "storage_account_id" {}
+variable "log_analytics_workspace_id" {}
+
+# Parameterizing Route Table `next_hop_type`
+variable "next_hop_type" {
+  description = "Type of next hop (e.g., VirtualAppliance, Internet, VnetLocal)"
   type        = string
-  description = "Azure region where resources will be deployed"
+  default     = "VirtualAppliance"
 }
 
-variable "resource_group_name" {
-  type        = string
-  description = "Name of the resource group"
-}
-
-variable "route_table_name" {
-  type        = string
-  description = "Name of the route table"
-}
-
-variable "nsg_name" {
-  type        = string
-  description = "Name of the network security group"
-}
-
-variable "vnet_name" {
-  type        = string
-  description = "Name of the virtual network"
-}
-
-variable "address_space_vnet1" {
-  type        = list(string)
-  description = "Address space for the virtual network"
-}
-
-variable "dns_servers" {
-  type        = list(string)
-  description = "List of DNS servers"
-}
-
-variable "enable_vm_protection" {
-  type        = bool
-  description = "Enable VM protection"
-}
-
-variable "encryption" {
-  type        = bool
-  description = "Enable encryption"
-}
-
-variable "subnet_name" {
-  type        = string
-  description = "Subnet name"
-}
-
-variable "subnet_address_prefixes" {
-  type        = list(string)
-  description = "Subnet address prefixes"
-}
-
+# Parameterizing Routes
 variable "routes" {
+  description = "List of routes"
   type = list(object({
     name           = string
     address_prefix = string
-    next_hop_ip    = string
+    next_hop_ip    = optional(string)
   }))
-  description = "List of routes for the route table"
+}
+
+# Parameterizing Security Rules
+variable "security_rules" {
+  description = "List of security rules for the NSG"
+  type = list(object({
+    name                       = string
+    priority                   = number
+    direction                  = string
+    access                     = string
+    protocol                   = string
+    source_address_prefix      = string
+    source_port_range          = string
+    destination_address_prefix = string
+    destination_port_range     = string
+  }))
+  default = [
+    {
+      name                       = "DenyInboundHTTPS"
+      priority                   = 4096
+      direction                  = "Inbound"
+      access                     = "Deny"
+      protocol                   = "*"
+      source_address_prefix      = "*"
+      source_port_range          = "*"
+      destination_address_prefix = "*"
+      destination_port_range     = "*"
+    }
+  ]
 }
