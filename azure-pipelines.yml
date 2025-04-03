@@ -21,7 +21,6 @@ variables:
   - group: TerraformSecrets  # Reference stored secrets in ADO
 
 stages:
-  # Stage to import existing resources into Terraform state
   - stage: Terraform_Import
     displayName: "Import Existing Resources"
     jobs:
@@ -38,15 +37,49 @@ stages:
             inputs:
               terraformVersion: '1.9.2'
 
-          # Import the existing resource group into Terraform state
+          # Remove the resource from state (if already managed)
           - script: |
-              echo "Initializing Terraform..."
-              terraform init -input=false
-              echo "Importing existing resource group..."
+              terraform state rm azurerm_resource_group.this || true
+              echo "Importing the existing resource group..."
               terraform import azurerm_resource_group.this /subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-001
-            displayName: "Import Resource Group"
+            displayName: "Remove Existing Resource and Import"
 
-  # Stage for the actual Terraform deployment
+  - stage: Terraform
+    jobs:
+      - job: RunTerraform
+        steps:
+          - checkout: self
+
+          # Debug: List Available Folders
+          - script: |
+              echo "Build.SourcesDirectory: $(Build.SourcesDirectory)"
+              ls -la $(Build.SourcesDirectory)
+            displayName: "Debug: List Available Folders"
+          
+          # Debug: List All Directories
+          - script: |
+              echo "Listing all directories under $(Build.SourcesDirectory)"
+              ls -laR $(Build.SourcesDirectory)
+            displayName: "Debug: List All Directories"
+          
+          # Debug: Verify if the folder exists
+          - script: |
+              echo "Checking folder existence at $(Build.SourcesDirectory)/${{ parameters.folderName }}"
+              if [ -d "$(Build.SourcesDirectory)/${{ parameters.folderName }}" ]; then
+                echo "Folder exists!"
+              else
+                echo "Error: Folder does not exist!"
+                exit 1
+              fi
+            displayName: "Verify Folder Exists"
+
+          # Debug: Navigate to Folder
+          - script: |
+              echo "Navigating to folder: $(Build.SourcesDirectory)/${{ parameters.folderName }}"
+              cd $(Build.SourcesDirectory)/${{ parameters.folderName }} || exit 1
+              ls -la
+            displayName: "Navigate to Selected Folder"
+
   - stage: Terraform_Deployment
     displayName: "Terraform Deployment"
     jobs:
@@ -62,23 +95,6 @@ stages:
             displayName: "Install Terraform"
             inputs:
               terraformVersion: '1.9.2'
-
-          # Debug: List Available Folders
-          - script: |
-              echo "Build.SourcesDirectory: $(Build.SourcesDirectory)"
-              ls -la $(Build.SourcesDirectory)
-            displayName: "Debug: List Available Folders"
-
-          # Debug: Verify if the folder exists
-          - script: |
-              echo "Checking folder existence at $(Build.SourcesDirectory)/${{ parameters.folderName }}"
-              if [ -d "$(Build.SourcesDirectory)/${{ parameters.folderName }}" ]; then
-                echo "Folder exists!"
-              else
-                echo "Error: Folder does not exist!"
-                exit 1
-              fi
-            displayName: "Verify Folder Exists"
 
           # Change directory to selected Terraform folder
           - script: |
