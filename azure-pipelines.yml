@@ -32,7 +32,10 @@ stages:
               echo "Build.SourcesDirectory: $(Build.SourcesDirectory)"
               ls -la $(Build.SourcesDirectory)
             displayName: "Debug: List Available Folders"
-
+          - script: |
+              echo "Listing all directories under $(Build.SourcesDirectory)"
+              ls -laR $(Build.SourcesDirectory)
+            displayName: "Debug: List All Directories"
           # Debug: Verify if the folder exists
           - script: |
               echo "Checking folder existence at $(Build.SourcesDirectory)/${{ parameters.folderName }}"
@@ -51,10 +54,7 @@ stages:
               ls -la
             displayName: "Navigate to Selected Folder"
 
-          - script: |
-              echo "Listing all directories under $(Build.SourcesDirectory)"
-              ls -laR $(Build.SourcesDirectory)
-            displayName: "Debug: List All Directories"
+          
 
   - stage: Terraform_Deployment
     displayName: "Terraform Deployment"
