@@ -1,5 +1,5 @@
 # Provider Configuration
-subscription_id = ""
+subscription_id = "1e437fdf-bd78-431d-ba95-1498f0e84c10"
 
 # Resource Group
 resource_group_name = "rg-dev-001"
