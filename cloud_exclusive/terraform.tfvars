@@ -9,6 +9,9 @@ enable_vm_protection    = true
 encryption              = false
 subnet_name             = "snet-dev-canadacentral-001"
 subnet_address_prefixes = ["10.0.0.0/28"]
+storage_account_id = "/subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-001/providers/Microsoft.Storage/storageAccounts/vnetlogssa"
+log_analytics_workspace_id = "/subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-001/providers/Microsoft.OperationalInsights/workspaces/vnetlaw"
+
 
 # Next Hop Type for Route Table
 next_hop_type = "VirtualAppliance"
