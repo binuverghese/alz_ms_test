@@ -15,6 +15,7 @@ terraform {
 provider "azurerm" {
   features {}
   subscription_id = "1e437fdf-bd78-431d-ba95-1498f0e84c10"
+
 }
 
 # Providers with Aliases
@@ -31,10 +32,10 @@ provider "azurerm" {
 }
 
 # Resource Group
-resource "azurerm_resource_group" "this" {
-  location = "Canada Central"
-  name     = "rg-dev-001"
-}
+#resource "azurerm_resource_group" "this" {
+#location = "Canada Central"
+#name     = "rg-dev-001"
+#}
 
 # Naming module
 module "naming" {
@@ -50,8 +51,8 @@ module "hub_vnet" {
   }
   name                = "hub-vnet"
   enable_telemetry    = false
-  resource_group_name = azurerm_resource_group.this.name
-  location            = azurerm_resource_group.this.location
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
   address_space       = ["10.0.0.0/24"]
   subnets = {
     AzureFirewallSubnet = {
@@ -64,33 +65,33 @@ resource "azurerm_subnet" "inbound" {
   name                 = "InboundEndpoint"
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet1.name
-  address_prefixes     = ["10.0.0.0/24"]  
+  address_prefixes     = ["10.0.0.0/24"]
 }
 
 resource "azurerm_subnet" "outbound" {
   name                 = "OutboundEndpoint"
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet1.name
-  address_prefixes     = ["10.1.0.0/24"]  
+  address_prefixes     = ["10.1.0.0/24"]
 }
 
 resource "azurerm_resource_group" "rg" {
-  name     = "rg-dev-001"  
-  location = "Canada Central"  
+  name     = "rg-dev-002"
+  location = "Canada Central"
 }
 
 resource "azurerm_virtual_network" "vnet1" {
-  name                = "hub-vnet"  # Replace with your desired virtual network name
+  name                = "hub-vnet" # Replace with your desired virtual network name
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  address_space       = ["10.0.0.0/16"]  
+  address_space       = ["10.0.0.0/16"]
 }
 
 resource "azurerm_virtual_network" "vnet2" {
-  name                = "spoke-vnet"  
+  name                = "spoke-vnet"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  address_space       = ["10.1.0.0/16"]  
+  address_space       = ["10.1.0.0/16"]
 }
 # DNS Resolver VNet
 module "dns_vnet" {
@@ -98,8 +99,8 @@ module "dns_vnet" {
   version             = "~> 0.2"
   name                = "dns-vnet"
   enable_telemetry    = false
-  resource_group_name = azurerm_resource_group.this.name
-  location            = azurerm_resource_group.this.location
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
   address_space       = ["10.0.2.0/24"]
   subnets = {
     InboundEndpoint = {
@@ -114,57 +115,58 @@ module "dns_vnet" {
 }
 
 module "private_resolver" {
-  source  = "Azure/avm-res-network-dnsresolver/azurerm"
+  source                      = "Azure/avm-res-network-dnsresolver/azurerm"
   resource_group_name         = azurerm_resource_group.rg.name
   name                        = "resolver"
   virtual_network_resource_id = azurerm_virtual_network.vnet1.id
   location                    = "Canada Central"
 
   inbound_endpoints = {
-     "inbound1" = {
-       name        = "inbound1"
-       subnet_name = azurerm_subnet.inbound.name  # Reference the created inbound subnet
-     }
-   }
+    "inbound1" = {
+      name        = "inbound1"
+      subnet_name = azurerm_subnet.inbound.name # Reference the created inbound subnet
+    }
+  }
 
-   outbound_endpoints = {
-     "outbound1" = {
-       name        = "outbound1"
-       subnet_name = azurerm_subnet.outbound.name  # Reference the created outbound subnet
-       forwarding_ruleset = {
-         "ruleset1" = {
-           name = "ruleset1"
-           additional_virtual_network_links = {
-             "vnet2" = {
-               vnet_id = azurerm_virtual_network.vnet2.id
-               metadata = {
-                 "type" = "spoke"
-                 "env"  = "dev"
-               }
-             }
-           }
-           rules = {
-             "rule1" = {
-               name        = "rule1"
-               domain_name = "example.com."
-               state       = "Enabled"
-               destination_ip_addresses = {
-                 "10.1.1.1" = "53"
-                 "10.1.1.2" = "53"
-               }
-             }
-           }
-         }
-       }
-     }
-   }
+  outbound_endpoints = {
+    "outbound1" = {
+      name        = "outbound1"
+      subnet_name = azurerm_subnet.outbound.name # Reference the created outbound subnet
+      forwarding_ruleset = {
+        "ruleset1" = {
+          name = "ruleset1"
+          additional_virtual_network_links = {
+            "vnet2" = {
+              vnet_id = azurerm_virtual_network.vnet2.id
+              metadata = {
+                "type" = "spoke"
+                "env"  = "dev"
+              }
+            }
+          }
+          rules = {
+            "rule1" = {
+              name        = "rule1"
+              domain_name = "example.com."
+              state       = "Enabled"
+              destination_ip_addresses = {
+                "10.1.1.1" = "53"
+                "10.1.1.2" = "53"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }
+
 
 # Firewall Public IP
 resource "azurerm_public_ip" "firewall_pip" {
   name                = var.firewall_pip_name
-  resource_group_name = azurerm_resource_group.this.name
-  location            = azurerm_resource_group.this.location
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
   allocation_method   = "Static"
   sku                 = "Standard"
   zones               = [1, 2, 3]
@@ -174,8 +176,8 @@ resource "azurerm_public_ip" "firewall_pip" {
 module "fw_policy" {
   source              = "Azure/avm-res-network-firewallpolicy/azurerm"
   name                = var.firewall_policy_name
-  location            = azurerm_resource_group.this.location
-  resource_group_name = azurerm_resource_group.this.name
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
 }
 
 output "fw_policy_id" {
@@ -186,8 +188,8 @@ output "fw_policy_id" {
 module "firewall" {
   source              = "Azure/avm-res-network-azurefirewall/azurerm"
   name                = var.firewall_name
-  location            = azurerm_resource_group.this.location
-  resource_group_name = azurerm_resource_group.this.name
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
   firewall_sku_tier   = var.firewall_sku_tier
   firewall_sku_name   = var.firewall_sku_name
   firewall_policy_id  = module.fw_policy.resource_id
@@ -207,8 +209,8 @@ module "bastion_vnet" {
   version             = "~> 0.2"
   name                = "bastion-vnet"
   enable_telemetry    = false
-  resource_group_name = azurerm_resource_group.this.name
-  location            = azurerm_resource_group.this.location
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
   address_space       = ["10.0.1.0/24"]
   subnets = {
     AzureBastionSubnet = {
@@ -221,9 +223,9 @@ module "bastion_vnet" {
 # Bastion Public IP
 resource "azurerm_public_ip" "bastion_ip" {
   allocation_method   = "Static"
-  location            = azurerm_resource_group.this.location
+  location            = azurerm_resource_group.rg.location
   name                = "bastion-public-ip"
-  resource_group_name = azurerm_resource_group.this.name
+  resource_group_name = azurerm_resource_group.rg.name
   sku                 = "Standard"
   zones               = [1, 2, 3]
 }
@@ -233,8 +235,8 @@ module "azure_bastion" {
   source              = "Azure/avm-res-network-bastionhost/azurerm"
   enable_telemetry    = true
   name                = module.naming.bastion_host.name_unique
-  resource_group_name = azurerm_resource_group.this.name
-  location            = azurerm_resource_group.this.location
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
   copy_paste_enabled  = true
   file_copy_enabled   = false
   sku                 = "Standard"
@@ -258,7 +260,7 @@ module "azure_bastion" {
 # VNet Peering - Bastion VNet to Hub VNet
 resource "azurerm_virtual_network_peering" "bastion_to_hub" {
   name                         = "bastion-to-hub"
-  resource_group_name          = azurerm_resource_group.this.name
+  resource_group_name          = azurerm_resource_group.rg.name
   virtual_network_name         = module.bastion_vnet.name
   remote_virtual_network_id    = module.hub_vnet.resource_id
   allow_virtual_network_access = true
@@ -268,7 +270,7 @@ resource "azurerm_virtual_network_peering" "bastion_to_hub" {
 
 resource "azurerm_virtual_network_peering" "hub_to_bastion" {
   name                         = "hub-to-bastion"
-  resource_group_name          = azurerm_resource_group.this.name
+  resource_group_name          = azurerm_resource_group.rg.name
   virtual_network_name         = module.hub_vnet.name
   remote_virtual_network_id    = module.bastion_vnet.resource_id
   allow_virtual_network_access = true
@@ -279,7 +281,7 @@ resource "azurerm_virtual_network_peering" "hub_to_bastion" {
 # VNet Peering - DNS Resolver VNet to Hub VNet
 resource "azurerm_virtual_network_peering" "dns_to_hub" {
   name                         = "dns-to-hub"
-  resource_group_name          = azurerm_resource_group.this.name
+  resource_group_name          = azurerm_resource_group.rg.name
   virtual_network_name         = module.dns_vnet.name
   remote_virtual_network_id    = module.hub_vnet.resource_id
   allow_virtual_network_access = true
@@ -289,7 +291,7 @@ resource "azurerm_virtual_network_peering" "dns_to_hub" {
 
 resource "azurerm_virtual_network_peering" "hub_to_dns" {
   name                         = "hub-to-dns"
-  resource_group_name          = azurerm_resource_group.this.name
+  resource_group_name          = azurerm_resource_group.rg.name
   virtual_network_name         = module.hub_vnet.name
   remote_virtual_network_id    = module.dns_vnet.resource_id
   allow_virtual_network_access = true
