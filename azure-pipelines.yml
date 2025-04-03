@@ -9,7 +9,7 @@ parameters:
     type: string
     default: "connected_online"
     values:
-      - "Firewall_Bastion_Hub"
+      - "firewall_bastion_hub"
       - "cloud_exclusive"
       - "cloud_exclusive_online"
       - "connected"
