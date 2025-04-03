@@ -65,7 +65,7 @@ resource "azurerm_monitor_diagnostic_setting" "vnet_flow_logs" {
   storage_account_id         = var.storage_account_id
   log_analytics_workspace_id = var.log_analytics_workspace_id
 
-  enabled_log {
+  log {
     category = "NetworkSecurityGroupRuleCounter"
     enabled  = true
   }
