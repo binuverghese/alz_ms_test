@@ -118,7 +118,7 @@ module "private_resolver" {
   resource_group_name         = azurerm_resource_group.rg.name
   name                        = "resolver"
   virtual_network_resource_id = azurerm_virtual_network.vnet1.id
-  location                    = local.location
+  location                    = "Canada Central"
 
   inbound_endpoints = {
      "inbound1" = {
