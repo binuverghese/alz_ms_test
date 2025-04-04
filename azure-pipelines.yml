@@ -43,20 +43,13 @@ stages:
               cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
               terraform init -input=false
             displayName: "Terraform Init"
+
           # Import the existing resource group into Terraform state
           - script: |
               cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
               echo "Importing the existing resource group..."
               terraform import azurerm_resource_group.this /subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-002
             displayName: "Import Existing Resource Group"
-
-          # Remove the resource from state (if already managed)
-          # - script: |
-          #     cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
-          #     terraform state rm azurerm_resource_group.this || true
-          #     echo "Importing the existing resource group..."
-          #     terraform import azurerm_resource_group.this /subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-001
-          #   displayName: "Remove Existing Resource and Import"
 
   - stage: Terraform
     jobs:
