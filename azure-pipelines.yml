@@ -38,54 +38,30 @@ stages:
             inputs:
               terraformVersion: '1.9.2'
 
-          # Initialize Terraform to install modules
+          # Ensure the Terraform folder exists
+          - script: |
+              if [ ! -d "$(Build.SourcesDirectory)/${{ parameters.folderName }}" ]; then
+                echo "Error: Folder $(Build.SourcesDirectory)/${{ parameters.folderName }} does not exist!"
+                exit 1
+              fi
+            displayName: "Verify Terraform Folder Exists"
+
+          # Initialize Terraform
           - script: |
               cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
               terraform init -input=false
             displayName: "Terraform Init"
 
-          # # Import the existing resource group into Terraform state
-          # - script: |
-          #     cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
-          #     echo "Importing the existing resource group..."
-          #     terraform import azurerm_resource_group.this /subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-002
-          #   displayName: "Import Existing Resource Group"
-
-  - stage: Terraform
-    jobs:
-      - job: RunTerraform
-        steps:
-          - checkout: self
-
-          # Debug: List Available Folders
+          # Check if the resource group is already imported before importing
           - script: |
-              echo "Build.SourcesDirectory: $(Build.SourcesDirectory)"
-              ls -la $(Build.SourcesDirectory)
-            displayName: "Debug: List Available Folders"
-          
-          # Debug: List All Directories
-          - script: |
-              echo "Listing all directories under $(Build.SourcesDirectory)"
-              ls -laR $(Build.SourcesDirectory)
-            displayName: "Debug: List All Directories"
-          
-          # Debug: Verify if the folder exists
-          - script: |
-              echo "Checking folder existence at $(Build.SourcesDirectory)/${{ parameters.folderName }}"
-              if [ -d "$(Build.SourcesDirectory)/${{ parameters.folderName }}" ]; then
-                echo "Folder exists!"
+              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+              if terraform state list | grep -q "azurerm_resource_group.this"; then
+                echo "Resource group already imported, skipping import."
               else
-                echo "Error: Folder does not exist!"
-                exit 1
+                echo "Importing the existing resource group..."
+                terraform import azurerm_resource_group.this /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-002
               fi
-            displayName: "Verify Folder Exists"
-
-          # Debug: Navigate to Folder
-          - script: |
-              echo "Navigating to folder: $(Build.SourcesDirectory)/${{ parameters.folderName }}"
-              cd $(Build.SourcesDirectory)/${{ parameters.folderName }} || exit 1
-              ls -la
-            displayName: "Navigate to Selected Folder"
+            displayName: "Import Existing Resource Group"
 
   - stage: Terraform_Deployment
     displayName: "Terraform Deployment"
@@ -108,7 +84,7 @@ stages:
               cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
             displayName: "Change Directory to Selected Folder"
 
-          # Terraform Init
+          # Terraform Init with Managed Identity
           - task: AzureCLI@2
             displayName: "Terraform Init"
             inputs:
@@ -118,7 +94,7 @@ stages:
               inlineScript: |
                 cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
                 terraform init -input=false \
-                  -backend-config="resource_group_name=rg-dev-001" \
+                  -backend-config="resource_group_name=rg-dev-002" \
                   -backend-config="storage_account_name=tfstatedemonew" \
                   -backend-config="container_name=tfstate" \
                   -backend-config="key=${{ parameters.folderName }}.tfstate" \
