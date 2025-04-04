@@ -44,12 +44,12 @@ stages:
               terraform init -input=false
             displayName: "Terraform Init"
 
-          # Import the existing resource group into Terraform state
-          - script: |
-              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
-              echo "Importing the existing resource group..."
-              terraform import azurerm_resource_group.this /subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-002
-            displayName: "Import Existing Resource Group"
+          # # Import the existing resource group into Terraform state
+          # - script: |
+          #     cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+          #     echo "Importing the existing resource group..."
+          #     terraform import azurerm_resource_group.this /subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-002
+          #   displayName: "Import Existing Resource Group"
 
   - stage: Terraform
     jobs:
