@@ -1,4 +1,5 @@
 trigger: none
+
 pr:
   branches:
     include:
@@ -52,11 +53,12 @@ stages:
               terraform init -input=false
             displayName: "Terraform Init"
 
-          # Check if the resource group is already imported before importing
+          # Check if the resource group exists in Terraform state, import if not
           - script: |
               cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+              
               if terraform state list | grep -q "azurerm_resource_group.this"; then
-                echo "Resource group already imported, skipping import."
+                echo "Resource group already in state, skipping import."
               else
                 echo "Importing the existing resource group..."
                 terraform import azurerm_resource_group.this /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-002
@@ -84,7 +86,7 @@ stages:
               cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
             displayName: "Change Directory to Selected Folder"
 
-          # Terraform Init with Managed Identity
+          # Terraform Init
           - task: AzureCLI@2
             displayName: "Terraform Init"
             inputs:
