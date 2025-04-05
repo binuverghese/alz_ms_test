@@ -76,64 +76,67 @@ stages:
               cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
 
               terraform init -input=false \
-                -backend-config="resource_group_name=rg-dev-001" \
-                -backend-config="storage_account_name=tfstatedemonew" \
-                -backend-config="container_name=tfstate" \
-                -backend-config="key=${{ parameters.folderName }}.tfstate" \
-                -backend-config="use_azuread_auth=true"
+              -backend-config="resource_group_name=rg-dev-001" \
+              -backend-config="storage_account_name=tfstatedemonew" \
+              -backend-config="container_name=tfstate" \
+              -backend-config="key=${{ parameters.folderName }}.tfstate" \
+              -backend-config="use_azuread_auth=true"
 
               echo "Checking and importing resources..."
 
-              # Fetch and import Resource Group dynamically
-              RG_NAME=$(az group list --query "[?starts_with(name, 'rg-dev-')].name" -o tsv)
-              if [ -n "$RG_NAME" ]; then
-                terraform state list | grep azurerm_resource_group.this || \
-                  terraform import azurerm_resource_group.this /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$RG_NAME
-              else
-                echo "Resource Group not found. Skipping import."
-              fi
+              # Fetch the resource group name dynamically
+                    RG_NAME=$(az group list --query "[?starts_with(name, 'rg-dev-')].name" -o tsv)
+                    if [ -n "$RG_NAME" ]; then
+                      echo "Found Resource Group: $RG_NAME"
+                      terraform state list | grep azurerm_resource_group.this || \
+                        terraform import azurerm_resource_group.this /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$RG_NAME
+                    else
+                      echo "Resource Group not found. Skipping import."
+                    fi
 
-              # Fetch and import NSG dynamically
-              NSG_NAME=$(az network nsg list --resource-group $RG_NAME --query "[].name" -o tsv)
-              if [ -n "$NSG_NAME" ]; then
-                terraform state list | grep azurerm_network_security_group.nsg || \
-                  terraform import azurerm_network_security_group.nsg /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$RG_NAME/providers/Microsoft.Network/networkSecurityGroups/$NSG_NAME
-              else
-                echo "NSG not found. Skipping import."
-              fi
+                    # Fetch and import NSG dynamically
+                    NSG_NAME=$(az network nsg list --resource-group $RG_NAME --query "[].name" -o tsv)
+                    if [ -n "$NSG_NAME" ]; then
+                      echo "Found NSG: $NSG_NAME"
+                      terraform state list | grep azurerm_network_security_group.nsg || \
+                        terraform import azurerm_network_security_group.nsg /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$RG_NAME/providers/Microsoft.Network/networkSecurityGroups/$NSG_NAME
+                    else
+                      echo "NSG not found. Skipping import."
+                    fi
 
-              # Fetch and import Route Table dynamically
-              ROUTE_TABLE_NAME=$(az network route-table list --resource-group $RG_NAME --query "[].name" -o tsv)
-              if [ -n "$ROUTE_TABLE_NAME" ]; then
-                terraform state list | grep azurerm_route_table.this || \
-                  terraform import azurerm_route_table.this /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$RG_NAME/providers/Microsoft.Network/routeTables/$ROUTE_TABLE_NAME
-              else
-                echo "Route Table not found. Skipping import."
-              fi
+                # Fetch and import Route Table dynamically
+                ROUTE_TABLE_NAME=$(az network route-table list --resource-group $RG_NAME --query "[].name" -o tsv)
+                if [ -n "$ROUTE_TABLE_NAME" ]; then
+                  echo "Found Route Table: $ROUTE_TABLE_NAME"
+                  terraform state list | grep azurerm_route_table.this || \
+                    terraform import azurerm_route_table.this /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$RG_NAME/providers/Microsoft.Network/routeTables/$ROUTE_TABLE_NAME
+                else
+                  echo "Route Table not found. Skipping import."
+                fi
 
-              # Fetch and import Subnet dynamically
-              SUBNET_NAME=$(az network vnet subnet list --resource-group $RG_NAME --vnet-name <vnet-name> --query "[].name" -o tsv)
-              if [ -n "$SUBNET_NAME" ]; then
-                terraform state list | grep module.subnet1 || \
-                  terraform import module.subnet1.azurerm_subnet.subnet /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$RG_NAME/providers/Microsoft.Network/virtualNetworks/<vnet-name>/subnets/$SUBNET_NAME
-              else
-                echo "Subnet not found. Skipping import."
-              fi
+                # Fetch and import Subnet dynamically
+                # Dynamically fetch the VNet name first
+                VNET_NAME=$(az network vnet list --resource-group $RG_NAME --query "[].name" -o tsv)
+                if [ -n "$VNET_NAME" ]; then
+                  echo "Found VNet: $VNET_NAME"
+                  # Fetch subnet name dynamically for the found VNet
+                  SUBNET_NAME=$(az network vnet subnet list --resource-group $RG_NAME --vnet-name $VNET_NAME --query "[].name" -o tsv)
+                  if [ -n "$SUBNET_NAME" ]; then
+                    echo "Found Subnet: $SUBNET_NAME"
+                    terraform state list | grep module.subnet1 || \
+                      terraform import module.subnet1.azurerm_subnet.subnet /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$RG_NAME/providers/Microsoft.Network/virtualNetworks/$VNET_NAME/subnets/$SUBNET_NAME
+                  else
+                    echo "Subnet not found. Skipping import."
+                  fi
+                else
+                  echo "VNet not found. Skipping subnet import."
+                fi
 
-              # Fetch and import VNet dynamically
-              VNET_NAME=$(az network vnet list --resource-group $RG_NAME --query "[].name" -o tsv)
-              if [ -n "$VNET_NAME" ]; then
-                terraform state list | grep module.vnet1 || \
-                  terraform import module.vnet1.azurerm_virtual_network.vnet /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$RG_NAME/providers/Microsoft.Network/virtualNetworks/$VNET_NAME
-              else
-                echo "VNet not found. Skipping import."
-              fi
-
-            env:
-              ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
-              ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
-              ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
-              ARM_TENANT_ID: "$(ARM_TENANT_ID)"
+              env:
+                ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
+                ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
+                ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
+                ARM_TENANT_ID: "$(ARM_TENANT_ID)"
 
   - stage: Terraform_Deployment
     displayName: "Terraform Deployment"
