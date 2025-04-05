@@ -1,3 +1,4 @@
+# azure-pipelines.yml
 trigger: none
 
 pr:
@@ -20,94 +21,116 @@ parameters:
       - "isolated_online"
 
 variables:
-  - group: TerraformSecrets  # Reference stored secrets in ADO
+  - group: TerraformSecrets
 
 stages:
+  - stage: Terraform_Backend_Setup
+    displayName: "Ensure Backend Infra Exists"
+    jobs:
+      - job: Create_Backend_Infra
+        displayName: "Create RG + SA + Container If Needed"
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: AzureCLI@2
+            displayName: "Ensure RG, SA & Container Exist"
+            inputs:
+              azureSubscription: "Terraform Deployment Connection_1"
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                RG_NAME="rg-dev-001"
+                SA_NAME="tfstatedemonew"
+                CONTAINER_NAME="tfstate"
+                LOCATION="eastus"
+
+                echo "Checking for resource group..."
+                az group show --name $RG_NAME || az group create --name $RG_NAME --location $LOCATION
+
+                echo "Checking for storage account..."
+                az storage account show --name $SA_NAME --resource-group $RG_NAME || az storage account create --name $SA_NAME --resource-group $RG_NAME --location $LOCATION --sku Standard_LRS
+
+                echo "Getting storage key..."
+                KEY=$(az storage account keys list --account-name $SA_NAME --resource-group $RG_NAME --query '[0].value' -o tsv)
+
+                echo "Checking for container..."
+                az storage container show --name $CONTAINER_NAME --account-name $SA_NAME --account-key $KEY || \
+                az storage container create --name $CONTAINER_NAME --account-name $SA_NAME --account-key $KEY
+            env:
+              AZURE_DEVOPS_EXT_AZURE_RM_SERVICE_PRINCIPAL_KEY: $(ARM_CLIENT_SECRET)
+
   - stage: Terraform_Import
     displayName: "Import Existing Resources"
     jobs:
-      - job: Terraform_Import_Resources
-        displayName: "Import Existing Resource Group into Terraform"
+      - job: Import_Terraform_Resources
+        displayName: "Import Resources into TF State"
         pool:
           vmImage: 'ubuntu-latest'
         steps:
           - checkout: self
 
           - task: TerraformInstaller@1
-            displayName: "Install Terraform"
             inputs:
               terraformVersion: '1.9.2'
 
           - script: |
               cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+
               terraform init -input=false \
                 -backend-config="resource_group_name=rg-dev-001" \
                 -backend-config="storage_account_name=tfstatedemonew" \
                 -backend-config="container_name=tfstate" \
                 -backend-config="key=${{ parameters.folderName }}.tfstate" \
                 -backend-config="use_azuread_auth=true"
-            displayName: "Terraform Init"
 
-          - script: |
-              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+              echo "Checking and importing resources..."
 
-              echo "Checking if resource group is already in Terraform state..."
-              terraform state list | grep azurerm_resource_group.this
-
-              if [ $? -ne 0 ]; then
-                echo "Resource group not in state. Importing..."
+              # Import RG
+              terraform state list | grep azurerm_resource_group.this || \
                 terraform import azurerm_resource_group.this /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-002
-              else
-                echo "Resource group already in Terraform state. Skipping import."
-              fi
-            displayName: "Import Resource Group If Needed"
+
+              # Import NSG
+              terraform state list | grep azurerm_network_security_group.nsg || \
+                terraform import azurerm_network_security_group.nsg /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-002/providers/Microsoft.Network/networkSecurityGroups/<nsg-name>
+
+              # Import Route Table
+              terraform state list | grep azurerm_route_table.this || \
+                terraform import azurerm_route_table.this /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-002/providers/Microsoft.Network/routeTables/<route-table-name>
+
+              # Import Subnet
+              terraform state list | grep module.subnet1 || \
+                terraform import module.subnet1.azurerm_subnet.subnet /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-002/providers/Microsoft.Network/virtualNetworks/<vnet-name>/subnets/<subnet-name>
+
+              # Import VNet
+              terraform state list | grep module.vnet1 || \
+                terraform import module.vnet1.azurerm_virtual_network.vnet /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-002/providers/Microsoft.Network/virtualNetworks/<vnet-name>
+
             env:
               ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
               ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
               ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
               ARM_TENANT_ID: "$(ARM_TENANT_ID)"
 
-  - stage: Terraform
-    jobs:
-      - job: RunTerraform
-        steps:
-          - checkout: self
-
-          - script: |
-              echo "Checking folder existence at $(Build.SourcesDirectory)/${{ parameters.folderName }}"
-              if [ -d "$(Build.SourcesDirectory)/${{ parameters.folderName }}" ]; then
-                echo "Folder exists!"
-              else
-                echo "Error: Folder does not exist!"
-                exit 1
-              fi
-            displayName: "Verify Folder Exists"
-
   - stage: Terraform_Deployment
     displayName: "Terraform Deployment"
     jobs:
       - job: Terraform_Deploy
-        displayName: "Deploy Terraform"
+        displayName: "Terraform Validate, Plan & Apply"
         pool:
           vmImage: 'ubuntu-latest'
         steps:
           - checkout: self
 
           - task: TerraformInstaller@1
-            displayName: "Install Terraform"
             inputs:
               terraformVersion: '1.9.2'
-
-          - script: |
-              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
-            displayName: "Change Directory to Selected Folder"
 
           - task: AzureCLI@2
             displayName: "Terraform Init"
             inputs:
               azureSubscription: "Terraform Deployment Connection_1"
-              scriptType: "bash"
-              scriptLocation: "inlineScript"
+              scriptType: bash
+              scriptLocation: inlineScript
               inlineScript: |
                 cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
                 terraform init -input=false \
@@ -131,8 +154,8 @@ stages:
             displayName: "Terraform Plan"
             inputs:
               azureSubscription: "Terraform Deployment Connection_1"
-              scriptType: "bash"
-              scriptLocation: "inlineScript"
+              scriptType: bash
+              scriptLocation: inlineScript
               inlineScript: |
                 cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
                 terraform plan -out=tfplan -input=false
@@ -146,8 +169,8 @@ stages:
             displayName: "Terraform Apply"
             inputs:
               azureSubscription: "Terraform Deployment Connection_1"
-              scriptType: "bash"
-              scriptLocation: "inlineScript"
+              scriptType: bash
+              scriptLocation: inlineScript
               inlineScript: |
                 cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
                 terraform apply -auto-approve tfplan
