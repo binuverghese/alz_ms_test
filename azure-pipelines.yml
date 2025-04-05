@@ -41,7 +41,7 @@ stages:
                 RG_NAME="rg-dev-001"
                 SA_NAME="tfstatedemonew"
                 CONTAINER_NAME="tfstate"
-                LOCATION="eastus"
+                LOCATION="Canada Central"
 
                 echo "Checking for resource group..."
                 az group show --name $RG_NAME || az group create --name $RG_NAME --location $LOCATION
