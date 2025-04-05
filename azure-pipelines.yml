@@ -135,7 +135,6 @@ stages:
               ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
               ARM_TENANT_ID: "$(ARM_TENANT_ID)"
 
-
   - stage: Terraform_Deployment
     displayName: "Terraform Deployment"
     jobs:
