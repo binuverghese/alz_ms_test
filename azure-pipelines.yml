@@ -67,26 +67,21 @@ stages:
           vmImage: 'ubuntu-latest'
         steps:
           - checkout: self
-        
-        # Ensure Azure login before running any az commands
+
+          - task: TerraformInstaller@1
+            inputs:
+              terraformVersion: '1.9.2'
+
           - task: AzureCLI@2
-            displayName: "Azure CLI Login"
+            displayName: "Terraform Init & Import Resources"
             inputs:
               azureSubscription: "Terraform Deployment Connection_1"
               scriptType: bash
               scriptLocation: inlineScript
               inlineScript: |
-                echo "Logging in to Azure..."
-                az account show  # Verifies if the login is successful
-          
-          - task: TerraformInstaller@1
-            inputs:
-              terraformVersion: '1.9.2'
+                cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
 
-          - script: |
-              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
-
-                # Initialize Terraform
+                # Terraform Init
                 terraform init -input=false \
                   -backend-config="resource_group_name=rg-dev-001" \
                   -backend-config="storage_account_name=tfstatedemonew" \
@@ -109,7 +104,7 @@ stages:
                 if [ -n "$NSG_NAME" ]; then
                   echo "Found NSG: $NSG_NAME"
                   terraform state list | grep azurerm_network_security_group.nsg || \
-                    terraform import azurerm_network_security_group.nsg /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$RG_NAME/providers/Microsoft.Network/networkSecurityGroups/$NSG_NAME
+                    terraform import azurerm_network_security_group.nsg "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$RG_NAME/providers/Microsoft.Network/networkSecurityGroups/$NSG_NAME"
                 else
                   echo "NSG not found. Skipping import."
                 fi
@@ -120,7 +115,7 @@ stages:
                 if [ -n "$ROUTE_TABLE_NAME" ]; then
                   echo "Found Route Table: $ROUTE_TABLE_NAME"
                   terraform state list | grep azurerm_route_table.this || \
-                    terraform import azurerm_route_table.this /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$RG_NAME/providers/Microsoft.Network/routeTables/$ROUTE_TABLE_NAME
+                    terraform import azurerm_route_table.this "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$RG_NAME/providers/Microsoft.Network/routeTables/$ROUTE_TABLE_NAME"
                 else
                   echo "Route Table not found. Skipping import."
                 fi
@@ -134,19 +129,19 @@ stages:
                   if [ -n "$SUBNET_NAME" ]; then
                     echo "Found Subnet: $SUBNET_NAME"
                     terraform state list | grep module.subnet1 || \
-                      terraform import module.subnet1.azurerm_subnet.subnet /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$RG_NAME/providers/Microsoft.Network/virtualNetworks/$VNET_NAME/subnets/$SUBNET_NAME
+                      terraform import module.subnet1.azurerm_subnet.subnet "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$RG_NAME/providers/Microsoft.Network/virtualNetworks/$VNET_NAME/subnets/$SUBNET_NAME"
                   else
                     echo "Subnet not found. Skipping import."
                   fi
                 else
                   echo "VNet not found. Skipping subnet import."
                 fi
+            env:
+                ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
+                ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
+                ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
+                ARM_TENANT_ID: "$(ARM_TENANT_ID)"
 
-              env:
-                  ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
-                  ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
-                  ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
-                  ARM_TENANT_ID: "$(ARM_TENANT_ID)"
 
 
 
