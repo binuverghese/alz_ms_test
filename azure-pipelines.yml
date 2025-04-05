@@ -27,43 +27,61 @@ stages:
     displayName: "Import Existing Resources"
     jobs:
       - job: Terraform_Import_Resources
-        displayName: "Import Existing Resources into Terraform"
+        displayName: "Import Existing Resource Group into Terraform"
         pool:
           vmImage: 'ubuntu-latest'
         steps:
           - checkout: self
 
-          # Install Terraform
           - task: TerraformInstaller@1
             displayName: "Install Terraform"
             inputs:
               terraformVersion: '1.9.2'
 
-          # Ensure the Terraform folder exists
-          - script: |
-              if [ ! -d "$(Build.SourcesDirectory)/${{ parameters.folderName }}" ]; then
-                echo "Error: Folder $(Build.SourcesDirectory)/${{ parameters.folderName }} does not exist!"
-                exit 1
-              fi
-            displayName: "Verify Terraform Folder Exists"
-
-          # Initialize Terraform
           - script: |
               cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
-              terraform init -input=false
+              terraform init -input=false \
+                -backend-config="resource_group_name=rg-dev-001" \
+                -backend-config="storage_account_name=tfstatedemonew" \
+                -backend-config="container_name=tfstate" \
+                -backend-config="key=${{ parameters.folderName }}.tfstate" \
+                -backend-config="use_azuread_auth=true"
             displayName: "Terraform Init"
 
-          # Check if the resource group exists in Terraform state, import if not
           - script: |
               cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
-              
-              if terraform state list | grep -q "azurerm_resource_group.this"; then
-                echo "Resource group already in state, skipping import."
-              else
-                echo "Importing the existing resource group..."
+
+              echo "Checking if resource group is already in Terraform state..."
+              terraform state list | grep azurerm_resource_group.this
+
+              if [ $? -ne 0 ]; then
+                echo "Resource group not in state. Importing..."
                 terraform import azurerm_resource_group.this /subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-002
+              else
+                echo "Resource group already in Terraform state. Skipping import."
               fi
-            displayName: "Import Existing Resource Group"
+            displayName: "Import Resource Group If Needed"
+            env:
+              ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
+              ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
+              ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
+              ARM_TENANT_ID: "$(ARM_TENANT_ID)"
+
+  - stage: Terraform
+    jobs:
+      - job: RunTerraform
+        steps:
+          - checkout: self
+
+          - script: |
+              echo "Checking folder existence at $(Build.SourcesDirectory)/${{ parameters.folderName }}"
+              if [ -d "$(Build.SourcesDirectory)/${{ parameters.folderName }}" ]; then
+                echo "Folder exists!"
+              else
+                echo "Error: Folder does not exist!"
+                exit 1
+              fi
+            displayName: "Verify Folder Exists"
 
   - stage: Terraform_Deployment
     displayName: "Terraform Deployment"
@@ -75,18 +93,15 @@ stages:
         steps:
           - checkout: self
 
-          # Install Terraform
           - task: TerraformInstaller@1
             displayName: "Install Terraform"
             inputs:
               terraformVersion: '1.9.2'
 
-          # Change directory to selected Terraform folder
           - script: |
               cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
             displayName: "Change Directory to Selected Folder"
 
-          # Terraform Init
           - task: AzureCLI@2
             displayName: "Terraform Init"
             inputs:
@@ -96,7 +111,7 @@ stages:
               inlineScript: |
                 cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
                 terraform init -input=false \
-                  -backend-config="resource_group_name=rg-dev-002" \
+                  -backend-config="resource_group_name=rg-dev-001" \
                   -backend-config="storage_account_name=tfstatedemonew" \
                   -backend-config="container_name=tfstate" \
                   -backend-config="key=${{ parameters.folderName }}.tfstate" \
@@ -107,13 +122,11 @@ stages:
               ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
               ARM_TENANT_ID: "$(ARM_TENANT_ID)"
 
-          # Terraform Validate
           - script: |
               cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
               terraform validate
             displayName: "Terraform Validate"
 
-          # Terraform Plan
           - task: AzureCLI@2
             displayName: "Terraform Plan"
             inputs:
@@ -129,7 +142,6 @@ stages:
               ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
               ARM_TENANT_ID: "$(ARM_TENANT_ID)"
 
-          # Terraform Apply
           - task: AzureCLI@2
             displayName: "Terraform Apply"
             inputs:
