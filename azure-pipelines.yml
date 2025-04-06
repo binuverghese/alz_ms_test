@@ -136,6 +136,17 @@ stages:
                 else
                   echo "VNet not found. Skipping subnet import."
                 fi
+
+                # Import VNet via module if not already in state
+                echo "Importing VNet if exists..."
+                VNET_NAME=$(az network vnet list --resource-group $RG_NAME --query "[?starts_with(name, 'vnet-')].name" -o tsv)
+                if [ -n "$VNET_NAME" ]; then
+                  echo "Found VNet: $VNET_NAME"
+                  terraform state list | grep module.vnet1.azapi_resource.vnet || \
+                    terraform import module.vnet1.azapi_resource.vnet "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$RG_NAME/providers/Microsoft.Network/virtualNetworks/$VNET_NAME"
+                else
+                  echo "No matching VNet found. Skipping VNet import."
+                fi
             env:
                 ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
                 ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
