@@ -1,47 +1,58 @@
-variable "application_gateway_name" {
-  description = "Name of the Application Gateway"
-  type        = string
-}
-
 variable "location" {
-  description = "Azure region"
+  description = "The Azure region to deploy resources in."
   type        = string
 }
 
-variable "resource_group_name" {
-  description = "Name of the resource group"
+variable "main_rg_name" {
+  description = "Name of the main resource group."
   type        = string
 }
 
-variable "appgw_subnet_id" {
-  description = "Subnet ID for the Application Gateway"
+variable "appgw_rg_name" {
+  description = "Name of the resource group for Application Gateway."
   type        = string
 }
 
-variable "appgw_public_ip_id" {
-  description = "Public IP ID for the Application Gateway"
+variable "hub_vnet_address_space" {
+  description = "Address space for the Hub VNet."
+  type        = list(string)
+}
+
+variable "hub_subnets" {
+  description = "Subnets in the Hub VNet."
+  type = map(object({
+    name             = string
+    address_prefixes = list(string)
+  }))
+}
+
+variable "appgw_name" {
+  description = "Name of the Application Gateway."
   type        = string
 }
 
-variable "sku_name" {
-  description = "SKU name for App Gateway"
-  type        = string
-  default     = "Standard_v2"
+variable "appgw_sku" {
+  description = "SKU config for App Gateway."
+  type = object({
+    name     = string
+    tier     = string
+    capacity = number
+  })
 }
 
-variable "sku_tier" {
-  description = "SKU tier for App Gateway"
-  type        = string
-  default     = "Standard_v2"
+variable "appgw_backend_addresses" {
+  description = "List of backend IP addresses for App Gateway."
+  type = list(object({
+    ip_address = string
+  }))
 }
 
-variable "capacity" {
-  description = "Instance count (capacity)"
-  type        = number
-  default     = 2
+variable "appgw_zones" {
+  description = "Availability Zones for App Gateway Public IP."
+  type        = list(number)
 }
 
-variable "firewall_pip_name" {
-  description = "Name of the firewall public IP"
+variable "appgw_public_ip_name" {
+  description = "Name for the App Gateway public IP."
   type        = string
 }
