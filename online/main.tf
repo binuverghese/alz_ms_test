@@ -56,53 +56,7 @@ module "bastion" {
   public_ip_address_id    = module.bastion_pip.id
   tags                    = var.tags
 }
-# variables.tf
-variable "rg_name" {
-  type = string
-}
 
-variable "appgw_rg_name" {
-  type = string
-}
-
-variable "location" {
-  type = string
-  default = "Canada Central"
-}
-
-variable "appgw_name" {
-  type = string
-}
-
-variable "appgw_public_ip_name" {
-  type = string
-}
-
-# terraform.tfvars
-rg_name             = "rg-dev-002"
-appgw_rg_name       = "rg-appgw-dev-002"
-location            = "Canada Central"
-appgw_name          = "appgw-dev-001"
-appgw_public_ip_name = "appgw-pip"
-
-# modules/resource-group/main.tf
-resource "azurerm_resource_group" "this" {
-  name     = var.name
-  location = var.location
-}
-
-output "name" {
-  value = azurerm_resource_group.this.name
-}
-
-# modules/resource-group/variables.tf
-variable "name" {
-  type = string
-}
-
-variable "location" {
-  type = string
-}
 
 # modules/public-ip/main.tf
 resource "azurerm_public_ip" "this" {
@@ -118,18 +72,6 @@ output "id" {
   value = azurerm_public_ip.this.id
 }
 
-# modules/public-ip/variables.tf
-variable "name" {
-  type = string
-}
-
-variable "resource_group_name" {
-  type = string
-}
-
-variable "location" {
-  type = string
-}
 
 # modules/app-gateway/main.tf
 module "app_gateway" {
@@ -192,26 +134,9 @@ module "app_gateway" {
   }]
 }
 
-# modules/app-gateway/variables.tf
-variable "name" {
-  type = string
-}
 
-variable "resource_group_name" {
-  type = string
-}
 
-variable "location" {
-  type = string
-}
 
-variable "public_ip_address_id" {
-  type = string
-}
-
-variable "appgw_subnet_id" {
-  type = string
-}
 
 # modules/networking/main.tf
 module "hub_vnet" {
@@ -238,11 +163,4 @@ output "appgw_subnet_id" {
   value = module.hub_vnet.subnets["AppGatewaySubnet"].resource_id
 }
 
-# modules/networking/variables.tf
-variable "resource_group_name" {
-  type = string
-}
 
-variable "location" {
-  type = string
-}
