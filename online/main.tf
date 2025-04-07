@@ -58,7 +58,7 @@ module "bastion" {
 }
 
 
-# modules/public-ip/main.tf
+/* # modules/public-ip/main.tf
 resource "azurerm_public_ip" "this" {
   name                = var.name
   resource_group_name = var.resource_group_name
@@ -132,7 +132,7 @@ module "app_gateway" {
     backend_address_pool_name  = "backendpool1"
     backend_http_settings_name = "http-settings"
   }]
-}
+} */
 
 
 
