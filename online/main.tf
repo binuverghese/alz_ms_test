@@ -33,6 +33,29 @@ module "app_gateway" {
   appgw_subnet_id         = module.networking.appgw_subnet_id
 }
 
+module "firewall" {
+  source                  = "./modules/firewall"
+  name                    = var.firewall_name
+  resource_group_name     = module.resource_group.name
+  location                = var.location
+  firewall_sku_name       = var.firewall_sku_name
+  firewall_sku_tier       = var.firewall_sku_tier
+  firewall_policy_id      = var.firewall_policy_id
+  firewall_ipconfig_name  = var.firewall_ipconfig_name
+  subnet_id               = module.networking.firewall_subnet_id
+  public_ip_address_id    = module.firewall_pip.id
+}
+
+module "bastion" {
+  source                  = "./modules/bastion"
+  name                    = var.bastion_name
+  resource_group_name     = module.resource_group.name
+  location                = var.location
+  ip_config_name          = var.bastion_ip_config_name
+  subnet_id               = module.networking.bastion_subnet_id
+  public_ip_address_id    = module.bastion_pip.id
+  tags                    = var.tags
+}
 # variables.tf
 variable "rg_name" {
   type = string
