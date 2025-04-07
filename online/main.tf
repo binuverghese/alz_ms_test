@@ -58,7 +58,7 @@ module "bastion" {
 }
 
 
-/* # modules/public-ip/main.tf
+# modules/public-ip/main.tf
 resource "azurerm_public_ip" "this" {
   name                = var.name
   resource_group_name = var.resource_group_name
@@ -73,7 +73,7 @@ output "id" {
 }
 
 
-# modules/app-gateway/main.tf
+/*# modules/app-gateway/main.tf
 module "app_gateway" {
   source  = "Azure/avm-res-network-applicationgateway/azurerm"
   version = "~> 0.3"
