@@ -80,7 +80,7 @@ stages:
             displayName: "Terraform Validate"
 
           - script: |
-              terraform plan -out=tfplan
+              terraform plan -out=tfplan -var-file="terraform.tfvars"
             workingDirectory: $(Build.SourcesDirectory)/${{ parameters.folderName }}
             displayName: "Terraform Plan"
 
@@ -122,7 +122,7 @@ stages:
             displayName: "Terraform Validate"
 
           - script: |
-              terraform plan -out=tfplan
+              terraform plan -out=tfplan -var-file="terraform.tfvars"
             workingDirectory: $(Build.SourcesDirectory)/${{ parameters.folderName }}
             displayName: "Terraform Plan"
 
@@ -138,7 +138,7 @@ stages:
     jobs:
       - deployment: Deploy_Prod
         displayName: "Deploy to Prod"
-        environment: prod  # Make sure this environment is defined in Azure DevOps UI
+        environment: prod
         pool:
           vmImage: ubuntu-latest
         strategy:
@@ -168,7 +168,7 @@ stages:
                   displayName: "Terraform Validate"
 
                 - script: |
-                    terraform plan -out=tfplan
+                    terraform plan -out=tfplan -var-file="terraform.tfvars"
                   workingDirectory: $(Build.SourcesDirectory)/${{ parameters.folderName }}
                   displayName: "Terraform Plan"
 
@@ -176,4 +176,3 @@ stages:
                     terraform apply -auto-approve tfplan
                   workingDirectory: $(Build.SourcesDirectory)/${{ parameters.folderName }}
                   displayName: "Terraform Apply"
-
