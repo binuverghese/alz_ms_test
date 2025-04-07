@@ -38,7 +38,7 @@ stages:
               scriptType: bash
               scriptLocation: inlineScript
               inlineScript: |
-                RG_NAME="rg-dev-002"
+                RG_NAME="rg-dev-001"
                 SA_NAME="tfstatedemonew"
                 CONTAINER_NAME="tfstate"
                 LOCATION="Canada Central"
