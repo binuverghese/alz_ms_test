@@ -56,3 +56,11 @@ variable "appgw_public_ip_name" {
   description = "Name for the App Gateway public IP."
   type        = string
 }
+
+variable "public_ip_address_id" {
+  type = string
+}
+
+variable "appgw_subnet_id" {
+  type = string
+}
