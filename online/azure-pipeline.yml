@@ -64,6 +64,12 @@ stages:
               terraformVersion: '1.9.2'
 
           - script: |
+              echo "Cleaning .terraform directory to force module refresh..."
+              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+              rm -rf .terraform
+            displayName: "Cleanup .terraform"
+
+          - script: |
               echo "Running Terraform Init for Dev"
               cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
               terraform init -input=false \
