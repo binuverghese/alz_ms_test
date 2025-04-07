@@ -15,7 +15,6 @@ terraform {
 provider "azurerm" {
   features {}
   subscription_id = "1e437fdf-bd78-431d-ba95-1498f0e84c10"
-
 }
 
 # Providers with Aliases
@@ -31,20 +30,12 @@ provider "azurerm" {
   features {}
 }
 
-# Resource Group
-#resource "azurerm_resource_group" "this" {
-#location = "Canada Central"
-#name     = "rg-dev-001"
-#}
-
-# Naming module
 module "naming" {
   source  = "Azure/naming/azurerm"
   version = "~> 0.3"
 }
 
 # Hub VNet
-# Update the 'hub_vnet' subnets in the module to include Application Gateway subnet
 module "hub_vnet" {
   source = "Azure/avm-res-network-virtualnetwork/azurerm"
   providers = {
@@ -81,14 +72,14 @@ module "app_gateway" {
     capacity = 2
   }
 
-  gateway_ip_configurations = [
+  gateway_ip_configuration = [
     {
       name      = "appgw-ipconfig"
       subnet_id = module.hub_vnet.subnets["AppGatewaySubnet"].resource_id
     }
   ]
 
-  frontend_ip_configurations = [
+  frontend_ip_configuration = [
     {
       name                 = "appgw-fe-ip"
       public_ip_address_id = azurerm_public_ip.appgw_public_ip.id
@@ -112,7 +103,7 @@ module "app_gateway" {
     }
   ]
 
-  backend_http_settings_collection = [
+  backend_http_settings = [
     {
       name                  = "http-settings"
       port                  = 80
@@ -150,27 +141,13 @@ resource "azurerm_public_ip" "appgw_public_ip" {
   zones               = [1, 2, 3]
 }
 
-resource "azurerm_subnet" "inbound" {
-  name                 = "InboundEndpoint"
-  resource_group_name  = azurerm_resource_group.rg.name
-  virtual_network_name = azurerm_virtual_network.vnet1.name
-  address_prefixes     = ["10.0.0.0/24"]
-}
-
-resource "azurerm_subnet" "outbound" {
-  name                 = "OutboundEndpoint"
-  resource_group_name  = azurerm_resource_group.rg.name
-  virtual_network_name = azurerm_virtual_network.vnet1.name
-  address_prefixes     = ["10.1.0.0/24"]
-}
-
 resource "azurerm_resource_group" "rg" {
   name     = "rg-dev-002"
   location = "Canada Central"
 }
 
 resource "azurerm_virtual_network" "vnet1" {
-  name                = "hub-vnet" # Replace with your desired virtual network name
+  name                = "hub-vnet" 
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
   address_space       = ["10.0.0.0/16"]
@@ -182,7 +159,7 @@ resource "azurerm_virtual_network" "vnet2" {
   resource_group_name = azurerm_resource_group.rg.name
   address_space       = ["10.1.0.0/16"]
 }
-# DNS Resolver VNet
+
 module "dns_vnet" {
   source              = "Azure/avm-res-network-virtualnetwork/azurerm"
   version             = "~> 0.2"
@@ -199,53 +176,6 @@ module "dns_vnet" {
     OutboundEndpoint = {
       name             = "OutboundEndpoint"
       address_prefixes = ["10.0.2.16/28"]
-    }
-  }
-}
-
-module "private_resolver" {
-  source                      = "Azure/avm-res-network-dnsresolver/azurerm"
-  resource_group_name         = azurerm_resource_group.rg.name
-  name                        = "resolver"
-  virtual_network_resource_id = azurerm_virtual_network.vnet1.id
-  location                    = "Canada Central"
-
-  inbound_endpoints = {
-    "inbound1" = {
-      name        = "inbound1"
-      subnet_name = azurerm_subnet.inbound.name # Reference the created inbound subnet
-    }
-  }
-
-  outbound_endpoints = {
-    "outbound1" = {
-      name        = "outbound1"
-      subnet_name = azurerm_subnet.outbound.name # Reference the created outbound subnet
-      forwarding_ruleset = {
-        "ruleset1" = {
-          name = "ruleset1"
-          additional_virtual_network_links = {
-            "vnet2" = {
-              vnet_id = azurerm_virtual_network.vnet2.id
-              metadata = {
-                "type" = "spoke"
-                "env"  = "dev"
-              }
-            }
-          }
-          rules = {
-            "rule1" = {
-              name        = "rule1"
-              domain_name = "example.com."
-              state       = "Enabled"
-              destination_ip_addresses = {
-                "10.1.1.1" = "53"
-                "10.1.1.2" = "53"
-              }
-            }
-          }
-        }
-      }
     }
   }
 }
@@ -344,6 +274,7 @@ module "azure_bastion" {
     environment = "development"
   }
 }
+
 
 
 # VNet Peering - Bastion VNet to Hub VNet
