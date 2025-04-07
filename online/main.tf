@@ -24,14 +24,14 @@ module "public_ip" {
   location            = var.location
 }
 
-module "app_gateway" {
+/*module "app_gateway" {
   source                  = "./modules/app-gateway"
   name                    = var.appgw_name
   resource_group_name     = module.appgw_resource_group.name
   location                = var.location
   public_ip_address_id    = module.public_ip.id
   appgw_subnet_id         = module.networking.appgw_subnet_id
-}
+} */
 
 module "firewall" {
   source                  = "./modules/firewall"
@@ -73,7 +73,7 @@ output "id" {
 }
 
 
-/*# modules/app-gateway/main.tf
+# modules/app-gateway/main.tf
 module "app_gateway" {
   source  = "Azure/avm-res-network-applicationgateway/azurerm"
   version = "~> 0.3"
@@ -132,7 +132,7 @@ module "app_gateway" {
     backend_address_pool_name  = "backendpool1"
     backend_http_settings_name = "http-settings"
   }]
-} */
+} 
 
 
 
