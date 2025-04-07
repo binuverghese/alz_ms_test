@@ -9,15 +9,9 @@ parameters:
   - name: folderName
     displayName: "Terraform Folder"
     type: string
-    default: "connected_online"
+    default: "online"
     values:
-      - "firewall_bastion_hub"
-      - "cloud_exclusive"
-      - "cloud_exclusive_online"
-      - "connected"
-      - "connected_online"
-      - "isolated"
-      - "isolated_online"
+      - "online"
 
 variables:
   - group: TerraformSecrets
@@ -81,18 +75,18 @@ stages:
             displayName: "Terraform Init"
 
           - script: |
-              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
               terraform validate
+            workingDirectory: $(Build.SourcesDirectory)/${{ parameters.folderName }}
             displayName: "Terraform Validate"
 
           - script: |
-              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
               terraform plan -out=tfplan
+            workingDirectory: $(Build.SourcesDirectory)/${{ parameters.folderName }}
             displayName: "Terraform Plan"
 
           - script: |
-              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
               terraform apply -auto-approve tfplan
+            workingDirectory: $(Build.SourcesDirectory)/${{ parameters.folderName }}
             displayName: "Terraform Apply"
 
   - stage: Test
@@ -123,61 +117,63 @@ stages:
             displayName: "Terraform Init"
 
           - script: |
-              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
               terraform validate
+            workingDirectory: $(Build.SourcesDirectory)/${{ parameters.folderName }}
             displayName: "Terraform Validate"
 
           - script: |
-              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
               terraform plan -out=tfplan
+            workingDirectory: $(Build.SourcesDirectory)/${{ parameters.folderName }}
             displayName: "Terraform Plan"
 
           - script: |
-              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
               terraform apply -auto-approve tfplan
+            workingDirectory: $(Build.SourcesDirectory)/${{ parameters.folderName }}
             displayName: "Terraform Apply"
 
   - stage: Prod
     displayName: "Terraform Deployment - Prod"
     dependsOn: Test
     condition: succeeded()
-    approval:
-      approvals:
-        - approvals: manual
     jobs:
-      - job: Deploy_Prod
+      - deployment: Deploy_Prod
         displayName: "Deploy to Prod"
+        environment: prod  # Make sure this environment is defined in Azure DevOps UI
         pool:
           vmImage: ubuntu-latest
-        steps:
-          - checkout: self
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
 
-          - task: TerraformInstaller@1
-            inputs:
-              terraformVersion: '1.9.2'
+                - task: TerraformInstaller@1
+                  inputs:
+                    terraformVersion: '1.9.2'
 
-          - script: |
-              echo "Running Terraform Init for Prod"
-              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
-              terraform init -input=false \
-                -backend-config="resource_group_name=rg-dev-001" \
-                -backend-config="storage_account_name=tfstatedemonew" \
-                -backend-config="container_name=tfstate" \
-                -backend-config="key=prod-${{ parameters.folderName }}.tfstate" \
-                -backend-config="use_azuread_auth=true"
-            displayName: "Terraform Init"
+                - script: |
+                    echo "Running Terraform Init for Prod"
+                    cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+                    terraform init -input=false \
+                      -backend-config="resource_group_name=rg-dev-001" \
+                      -backend-config="storage_account_name=tfstatedemonew" \
+                      -backend-config="container_name=tfstate" \
+                      -backend-config="key=prod-${{ parameters.folderName }}.tfstate" \
+                      -backend-config="use_azuread_auth=true"
+                  displayName: "Terraform Init"
 
-          - script: |
-              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
-              terraform validate
-            displayName: "Terraform Validate"
+                - script: |
+                    terraform validate
+                  workingDirectory: $(Build.SourcesDirectory)/${{ parameters.folderName }}
+                  displayName: "Terraform Validate"
 
-          - script: |
-              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
-              terraform plan -out=tfplan
-            displayName: "Terraform Plan"
+                - script: |
+                    terraform plan -out=tfplan
+                  workingDirectory: $(Build.SourcesDirectory)/${{ parameters.folderName }}
+                  displayName: "Terraform Plan"
 
-          - script: |
-              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
-              terraform apply -auto-approve tfplan
-            displayName: "Terraform Apply"
+                - script: |
+                    terraform apply -auto-approve tfplan
+                  workingDirectory: $(Build.SourcesDirectory)/${{ parameters.folderName }}
+                  displayName: "Terraform Apply"
+
