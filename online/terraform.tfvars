@@ -1,8 +1,34 @@
-application_gateway_name = "appgw-dev-001"
-location                 = "Canada Central"
-resource_group_name      = "rg-dev-002"
-appgw_subnet_id          = "/subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-002/providers/Microsoft.Network/virtualNetworks/hub-vnet/subnets/appgw-subnet"
-appgw_public_ip_id       = "/subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-002/providers/Microsoft.Network/publicIPAddresses/appgw-pip"
-sku_name                 = "Standard_v2"
-sku_tier                 = "Standard_v2"
-capacity                 = 2
+location         = "Canada Central"
+
+main_rg_name     = "rg-dev-002"
+appgw_rg_name    = "rg-appgw-dev"
+
+hub_vnet_address_space = ["10.0.0.0/16"]
+
+hub_subnets = {
+  AzureFirewallSubnet = {
+    name             = "AzureFirewallSubnet"
+    address_prefixes = ["10.0.0.0/24"]
+  }
+  AppGatewaySubnet = {
+    name             = "AppGatewaySubnet"
+    address_prefixes = ["10.0.3.0/24"]
+  }
+}
+
+appgw_name = "appgw-dev-001"
+
+appgw_sku = {
+  name     = "WAF_v2"
+  tier     = "WAF_v2"
+  capacity = 2
+}
+
+appgw_backend_addresses = [
+  { ip_address = "10.1.1.4" },
+  { ip_address = "10.1.1.5" }
+]
+
+appgw_zones = [1, 2, 3]
+
+appgw_public_ip_name = "appgw-pip"
