@@ -40,3 +40,8 @@ variable "capacity" {
   type        = number
   default     = 2
 }
+
+variable "firewall_pip_name" {
+  description = "Name of the firewall public IP"
+  type        = string
+}
