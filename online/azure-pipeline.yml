@@ -1,0 +1,183 @@
+trigger: none
+
+pr:
+  branches:
+    include:
+      - main
+
+parameters:
+  - name: folderName
+    displayName: "Terraform Folder"
+    type: string
+    default: "connected_online"
+    values:
+      - "firewall_bastion_hub"
+      - "cloud_exclusive"
+      - "cloud_exclusive_online"
+      - "connected"
+      - "connected_online"
+      - "isolated"
+      - "isolated_online"
+
+variables:
+  - group: TerraformSecrets
+
+stages:
+  - stage: Terraform_Backend_Setup
+    displayName: "Setup Backend Infra"
+    jobs:
+      - job: Create_Backend
+        displayName: "Ensure RG, SA, Container Exist"
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: "Terraform-OIDC-Connection"
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                RG_NAME="rg-dev-001"
+                SA_NAME="tfstatedemonew"
+                CONTAINER_NAME="tfstate"
+                LOCATION="Canada Central"
+
+                echo "Ensuring Resource Group exists..."
+                az group show --name $RG_NAME || az group create --name $RG_NAME --location $LOCATION
+
+                echo "Ensuring Storage Account exists..."
+                az storage account show --name $SA_NAME --resource-group $RG_NAME || \
+                  az storage account create --name $SA_NAME --resource-group $RG_NAME --location $LOCATION --sku Standard_LRS
+
+                echo "Ensuring Blob Container exists..."
+                KEY=$(az storage account keys list --account-name $SA_NAME --resource-group $RG_NAME --query '[0].value' -o tsv)
+                az storage container show --name $CONTAINER_NAME --account-name $SA_NAME --account-key $KEY || \
+                  az storage container create --name $CONTAINER_NAME --account-name $SA_NAME --account-key $KEY
+
+  - stage: Dev
+    displayName: "Terraform Deployment - Dev"
+    dependsOn: Terraform_Backend_Setup
+    jobs:
+      - job: Deploy_Dev
+        displayName: "Deploy to Dev"
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - checkout: self
+
+          - task: TerraformInstaller@1
+            inputs:
+              terraformVersion: '1.9.2'
+
+          - script: |
+              echo "Running Terraform Init for Dev"
+              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+              terraform init -input=false \
+                -backend-config="resource_group_name=rg-dev-001" \
+                -backend-config="storage_account_name=tfstatedemonew" \
+                -backend-config="container_name=tfstate" \
+                -backend-config="key=dev-${{ parameters.folderName }}.tfstate" \
+                -backend-config="use_azuread_auth=true"
+            displayName: "Terraform Init"
+
+          - script: |
+              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+              terraform validate
+            displayName: "Terraform Validate"
+
+          - script: |
+              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+              terraform plan -out=tfplan
+            displayName: "Terraform Plan"
+
+          - script: |
+              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+              terraform apply -auto-approve tfplan
+            displayName: "Terraform Apply"
+
+  - stage: Test
+    displayName: "Terraform Deployment - Test"
+    dependsOn: Dev
+    condition: succeeded()
+    jobs:
+      - job: Deploy_Test
+        displayName: "Deploy to Test"
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - checkout: self
+
+          - task: TerraformInstaller@1
+            inputs:
+              terraformVersion: '1.9.2'
+
+          - script: |
+              echo "Running Terraform Init for Test"
+              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+              terraform init -input=false \
+                -backend-config="resource_group_name=rg-dev-001" \
+                -backend-config="storage_account_name=tfstatedemonew" \
+                -backend-config="container_name=tfstate" \
+                -backend-config="key=test-${{ parameters.folderName }}.tfstate" \
+                -backend-config="use_azuread_auth=true"
+            displayName: "Terraform Init"
+
+          - script: |
+              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+              terraform validate
+            displayName: "Terraform Validate"
+
+          - script: |
+              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+              terraform plan -out=tfplan
+            displayName: "Terraform Plan"
+
+          - script: |
+              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+              terraform apply -auto-approve tfplan
+            displayName: "Terraform Apply"
+
+  - stage: Prod
+    displayName: "Terraform Deployment - Prod"
+    dependsOn: Test
+    condition: succeeded()
+    approval:
+      approvals:
+        - approvals: manual
+    jobs:
+      - job: Deploy_Prod
+        displayName: "Deploy to Prod"
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - checkout: self
+
+          - task: TerraformInstaller@1
+            inputs:
+              terraformVersion: '1.9.2'
+
+          - script: |
+              echo "Running Terraform Init for Prod"
+              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+              terraform init -input=false \
+                -backend-config="resource_group_name=rg-dev-001" \
+                -backend-config="storage_account_name=tfstatedemonew" \
+                -backend-config="container_name=tfstate" \
+                -backend-config="key=prod-${{ parameters.folderName }}.tfstate" \
+                -backend-config="use_azuread_auth=true"
+            displayName: "Terraform Init"
+
+          - script: |
+              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+              terraform validate
+            displayName: "Terraform Validate"
+
+          - script: |
+              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+              terraform plan -out=tfplan
+            displayName: "Terraform Plan"
+
+          - script: |
+              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+              terraform apply -auto-approve tfplan
+            displayName: "Terraform Apply"
