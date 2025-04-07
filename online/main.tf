@@ -78,24 +78,18 @@ module "app_gateway" {
   source  = "Azure/avm-res-network-applicationgateway/azurerm"
   version = "~> 0.3"
 
-  name                = var.name
-  resource_group_name = var.resource_group_name
+  name                = var.appgw_name
   location            = var.location
+  resource_group_name = module.appgw_resource_group.name
 
-  sku = {
-    name     = "WAF_v2"
-    tier     = "WAF_v2"
-    capacity = 2
-  }
-
-  gateway_ip_configuration = [{
+  gateway_ip_configurations = [{
     name      = "appgw-ipconfig"
-    subnet_id = var.appgw_subnet_id
+    subnet_id = module.networking.appgw_subnet_id
   }]
 
-  frontend_ip_configuration = [{
+  frontend_ip_configurations = [{
     name                 = "appgw-fe-ip"
-    public_ip_address_id = var.public_ip_address_id
+    public_ip_address_id = module.public_ip.id
   }]
 
   frontend_ports = [{
@@ -111,7 +105,7 @@ module "app_gateway" {
     ]
   }]
 
-  backend_http_settings = [{
+  backend_http_settings_collection = [{
     name                  = "http-settings"
     port                  = 80
     protocol              = "Http"
@@ -132,7 +126,7 @@ module "app_gateway" {
     backend_address_pool_name  = "backendpool1"
     backend_http_settings_name = "http-settings"
   }]
-} 
+}
 
 
 
