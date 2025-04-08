@@ -26,7 +26,7 @@ module "hub_vnet" {
   name                = "hub-vnet"
   address_space       = ["10.0.0.0/16"]
   location            = var.location
-  resource_group_name = var.resource_group_name.rg_group.name
+  resource_group_name = var.resource_group_name
   enable_telemetry    = false
 
   subnets = {
