@@ -37,33 +37,22 @@ routes = [
     name           = "On-Prem"
     address_prefix = "192.168.0.0/16"
     next_hop_ip    = "none"
+  },
+
+ {
+    name           = "KMS1"
+    address_prefix = "20.118.99.224/32"
+    next_hop_ip    = null
+  },
+{
+    name           = "KMS2"
+    address_prefix = "40.83.235.53/32"
+    next_hop_ip    = null
   }
 ]
 
 # Security Rules
 security_rules = [
-  {
-    name                       = "AllowSSH"
-    priority                   = 100
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_address_prefix      = "*"
-    source_port_range          = "*"
-    destination_address_prefix = "*"
-    destination_port_range     = "*"
-  },
-  {
-    name                       = "AllowHTTP"
-    priority                   = 200
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_address_prefix      = "*"
-    source_port_range          = "*"
-    destination_address_prefix = "*"
-    destination_port_range     = "80"
-  },
   {
     name                       = "DenyAllInbound"
     priority                   = 4096
