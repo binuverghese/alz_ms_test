@@ -8,9 +8,20 @@ terraform {
   }
 }
 
+backend "azurerm" {
+    resource_group_name   = "rg-dev-001"   # The RG where state is stored
+    storage_account_name  = "tfstatedemonew"     # The storage account name
+    container_name        = "tfstate"               # The container name
+    key                   = "terraform.tfstate"     # The name of the state file
+  }
+}
+
 provider "azurerm" {
   features {}
-  subscription_id = "1e437fdf-bd78-431d-ba95-1498f0e84c10"
+   #use_msi        = true  #
+   subscription_id = "1e437fdf-bd78-431d-ba95-1498f0e84c10"
+   tenant_id       = "35db3582-96af-4081-a32c-7bbaa2cf3ca9"
+   client_id       = "ec375efa-27ef-4631-834f-05ddec12a417"
 }
 
 # Resource Group
