@@ -7,8 +7,6 @@ variable "subnet_address_prefixes" {}
 variable "address_space_vnet1" {}
 variable "enable_vm_protection" {}
 variable "dns_servers" {}
-variable "storage_account_id" {}
-variable "log_analytics_workspace_id" {}
 
 variable "nsg_name" {
   description = "The name of the Network Security Group"
