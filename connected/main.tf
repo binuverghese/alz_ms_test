@@ -52,20 +52,16 @@ resource "azurerm_route_table" "this" {
   dynamic "route" {
     for_each = var.routes
     content {
-      name           = route.value.name
-      address_prefix = route.value.address_prefix
-      next_hop_type  = route.value.next_hop_type
+      name                   = route.value.name
+      address_prefix         = route.value.address_prefix
+      next_hop_type          = route.value.next_hop_type
 
-      # Only include next_hop_in_ip_address if next_hop_type is VirtualAppliance
-      dynamic "next_hop_in_ip_address" {
-        for_each = route.value.next_hop_type == "VirtualAppliance" ? [1] : []
-        content {
-          next_hop_in_ip_address = route.value.next_hop_ip
-        }
-      }
+      # Only set next_hop_in_ip_address if type is VirtualAppliance
+      next_hop_in_ip_address = route.value.next_hop_type == "VirtualAppliance" ? route.value.next_hop_ip : null
     }
   }
 }
+
 
 
 # Network Security Group (NSG)
