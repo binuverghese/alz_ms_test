@@ -3,12 +3,12 @@ resource_group_name     = "rg-dev-001"
 route_table_name        = "rt-navigator"
 nsg_name                = "nsg-con-001"
 vnet_name               = "vnet-dev-canadacentral-001"
-address_space_vnet1     = ["10.0.0.0/24"]
+address_space_vnet1     = ["10.1.1.0/24"]
 dns_servers             = ["10.0.2.4"]
 enable_vm_protection    = true
 encryption              = false
 subnet_name             = "snet-dev-canadacentral-001"
-subnet_address_prefixes = ["10.0.0.0/28"]
+subnet_address_prefixes = ["10.1.1.0/28"]
 storage_account_id         = "/subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-001/providers/Microsoft.Storage/storageAccounts/vnetlogssa"
 log_analytics_workspace_id = "/subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-001/providers/Microsoft.OperationalInsights/workspaces/vnetlaw"
 
