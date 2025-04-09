@@ -14,7 +14,7 @@ log_analytics_workspace_id = "/subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c1
 
 
 # Next Hop Type for Route Table
-next_hop_type = "VirtualAppliance"
+#next_hop_type = "VirtualAppliance"
 
 # Routes
 routes = [
