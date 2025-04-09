@@ -14,7 +14,7 @@ backend "azurerm" {
     container_name        = "tfstate"               # The container name
     key                   = "terraform.tfstate"     # The name of the state file
   }
-}
+
 
 provider "azurerm" {
   features {}
