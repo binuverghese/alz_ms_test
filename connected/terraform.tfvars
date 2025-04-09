@@ -8,7 +8,7 @@ dns_servers             = ["10.0.2.4"]
 enable_vm_protection    = true
 encryption              = false
 subnet_name             = "snet-dev-canadacentral-001"
-subnet_address_prefixes = ["10.0.0.0/28"]
+subnet_address_prefixes = ["10.1.0.0/28"]
 
 # Next Hop Type for Route Table
 next_hop_type = "VirtualAppliance"
