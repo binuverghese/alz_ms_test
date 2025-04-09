@@ -14,7 +14,7 @@ subnet_address_prefixes = ["10.1.1.0/28"]
 
 
 # Next Hop Type for Route Table
-#next_hop_type = "VirtualAppliance"
+next_hop_type = "VirtualAppliance"
 
 # Routes
 routes = [
