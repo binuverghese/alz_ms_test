@@ -5,16 +5,26 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 3.74"
     }
+    azapi = {
+      source  = "Azure/azapi"
+      version = "~> 1.0"
+    }
+    http = {
+      source  = "hashicorp/http"
+      version = "~> 3.4"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.5"
+    }
   }
-}
-
 backend "azurerm" {
     resource_group_name   = "rg-dev-001"   # The RG where state is stored
     storage_account_name  = "tfstatedemonew"     # The storage account name
     container_name        = "tfstate"               # The container name
     key                   = "terraform.tfstate"     # The name of the state file
   }
-
+}
 
 provider "azurerm" {
   features {}
@@ -24,8 +34,12 @@ provider "azurerm" {
    client_id       = "ec375efa-27ef-4631-834f-05ddec12a417"
 }
 
+provider "azapi" {
+  
+}
+
 # Resource Group
-resource "azurerm_resource_group" "this" {
+  resource "azurerm_resource_group" "this" {
   location = var.location
   name     = var.resource_group_name
 }
@@ -47,61 +61,43 @@ resource "azurerm_route_table" "this" {
 }
 
 
-# Network Security Group (NSG) - Parameterized `security_rule`
+
+
+# Network Security Group (NSG)
 resource "azurerm_network_security_group" "nsg" {
   location            = var.location
   name                = var.nsg_name
   resource_group_name = var.resource_group_name
 
-  dynamic "security_rule" {
-    for_each = var.security_rules
-    content {
-      name                       = security_rule.value.name
-      priority                   = security_rule.value.priority
-      direction                  = security_rule.value.direction
-      access                     = security_rule.value.access
-      protocol                   = security_rule.value.protocol
-      source_address_prefix      = security_rule.value.source_address_prefix
-      source_port_range          = security_rule.value.source_port_range
-      destination_address_prefix = security_rule.value.destination_address_prefix
-      destination_port_range     = security_rule.value.destination_port_range
-    }
+  security_rule {
+    access                     = "Deny"
+    destination_address_prefix = "*"
+    destination_port_range     = "*"
+    direction                  = "Inbound"
+    name                       = "DenyAllInbound"
+    priority                   = 4096
+    protocol                   = "*"
+    source_address_prefix      = "*"
+    source_port_range          = "*"
   }
 }
 
-# Enable VNET Flow Logs
-resource "azurerm_monitor_diagnostic_setting" "vnet_flow_logs" {
-  name                       = "vnet-flow-logs"
-  target_resource_id         = module.vnet1.resource_id
-  storage_account_id         = var.storage_account_id
-  log_analytics_workspace_id = var.log_analytics_workspace_id
-
-  log {
-    category = "NetworkSecurityGroupRuleCounter"
-    enabled  = true
-  }
-
-  metric {
-    category = "AllMetrics"
-    enabled  = true
-  }
-}
-
-# Virtual Network Module
+# Virtual Network
 module "vnet1" {
   source              = "Azure/avm-res-network-virtualnetwork/azurerm"
   resource_group_name = var.resource_group_name
   location            = var.location
   name                = var.vnet_name
   address_space       = var.address_space_vnet1
-  enable_vm_protection = var.enable_vm_protection
 
   dns_servers = {
     dns_servers = toset(var.dns_servers)
   }
+
+  enable_vm_protection = var.enable_vm_protection
 }
 
-# Subnet Module
+# Subnet
 module "subnet1" {
   source = "Azure/avm-res-network-virtualnetwork/azurerm//modules/subnet"
 
@@ -111,6 +107,11 @@ module "subnet1" {
 
   address_prefixes = var.subnet_address_prefixes
   name             = var.subnet_name
+}
+
+# Ensure the Subnet module outputs `resource_id`
+output "subnet_id" {
+  value = module.subnet1.resource_id
 }
 
 # Associate Route Table (UDR) with Subnet
