@@ -54,13 +54,12 @@ resource "azurerm_route_table" "this" {
     content {
       name                   = route.value.name
       address_prefix         = route.value.address_prefix
-      next_hop_type          = route.value.next_hop_type
-
-      # Only set next_hop_in_ip_address if type is VirtualAppliance
-      next_hop_in_ip_address = route.value.next_hop_type == "VirtualAppliance" ? route.value.next_hop_ip : null
+      next_hop_type          = route.value.next_hop_ip != null ? "VirtualAppliance" : "Internet"
+      next_hop_in_ip_address = route.value.next_hop_ip
     }
   }
 }
+
 
 
 
