@@ -1,8 +1,8 @@
 location                = "Canada Central"
-resource_group_name     = "rg-dev-001"
+resource_group_name     = "rg-dev-004"
 route_table_name        = "rt-navigator"
-nsg_name                = "nsg-con-001"
-vnet_name               = "vnet-dev-canadacentral-001"
+nsg_name                = "nsg-con-004"
+vnet_name               = "vnet-dev-canadacentral-004"
 address_space_vnet1     = ["10.1.1.0/24"]
 dns_servers             = ["10.0.2.4"]
 enable_vm_protection    = true
