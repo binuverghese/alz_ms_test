@@ -97,7 +97,7 @@ stages:
 
                     for tf_resource in "${!resources[@]}"; do
                       id="${resources[$tf_resource]}"
-                      
+
                       # Check if already in state
                       if terraform state show "$tf_resource" &>/dev/null; then
                         echo "$tf_resource already in state. Skipping import."
@@ -139,6 +139,7 @@ stages:
                     terraform validate
                   displayName: "Terraform Validate"
 
+                # Terraform Plan with -lock=false
                 - task: AzureCLI@2
                   displayName: "Terraform Plan"
                   inputs:
@@ -147,13 +148,14 @@ stages:
                     scriptLocation: inlineScript
                     inlineScript: |
                       cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
-                      terraform plan -out=tfplan -input=false
+                      terraform plan -out=tfplan -input=false -lock=false
                   env:
                     ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
                     ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
                     ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
                     ARM_TENANT_ID: "$(ARM_TENANT_ID)"
 
+                # Terraform Apply with -lock=false
                 - task: AzureCLI@2
                   displayName: "Terraform Apply"
                   inputs:
@@ -162,7 +164,7 @@ stages:
                     scriptLocation: inlineScript
                     inlineScript: |
                       cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
-                      terraform apply -auto-approve tfplan
+                      terraform apply -auto-approve -lock=false tfplan
                   env:
                     ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
                     ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
