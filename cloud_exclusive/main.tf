@@ -19,7 +19,6 @@ resource "azurerm_resource_group" "this" {
   name     = var.resource_group_name
 }
 
-# Route Table (UDR) - Parameterized `next_hop_type`
 resource "azurerm_route_table" "this" {
   location            = var.location
   name                = var.route_table_name
@@ -30,11 +29,12 @@ resource "azurerm_route_table" "this" {
     content {
       name                   = route.value.name
       address_prefix         = route.value.address_prefix
-      next_hop_type          = var.next_hop_type # Now parameterized
+      next_hop_type          = route.value.next_hop_ip != null ? "VirtualAppliance" : "Internet"
       next_hop_in_ip_address = route.value.next_hop_ip
     }
   }
 }
+
 
 # Network Security Group (NSG) - Parameterized `security_rule`
 resource "azurerm_network_security_group" "nsg" {
