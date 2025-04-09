@@ -34,6 +34,17 @@ routes = [
     name           = "On-Prem"
     address_prefix = "192.168.0.0/16"
     next_hop_ip    = "10.0.0.4"
+  },
+	
+    {
+    name           = "KMS1
+    address_prefix = "20.118.99.224/32"
+ 
+  },
+{
+    name           = "KMS2
+    address_prefix = "40.83.235.53/32"
+    
   }
 ]
 
