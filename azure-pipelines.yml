@@ -47,8 +47,8 @@ stages:
               scriptType: bash
               scriptLocation: inlineScript
               inlineScript: |
-                RG_NAME="rg-${{ parameters.environment }}-001"
-                SA_NAME="tfstate${{ parameters.environment }}"
+                RG_NAME="rg-dev-001"
+                SA_NAME="tfstatedemonew"
                 CONTAINER_NAME="tfstate"
                 LOCATION="Canada Central"
 
@@ -90,9 +90,9 @@ stages:
                     cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
 
                     # Example resource imports
-                    terraform import azurerm_route_table.this /subscriptions/$(subscriptionId)/resourceGroups/rg-${{ parameters.environment }}-001/providers/Microsoft.Network/routeTables/rt-navigator2 || echo "Resource already imported"
-                    terraform import azurerm_network_security_group.nsg /subscriptions/$(subscriptionId)/resourceGroups/rg-${{ parameters.environment }}-001/providers/Microsoft.Network/networkSecurityGroups/nsg-con-001 || echo "Resource already imported"
-                    terraform import 'module.vnet1.azapi_resource.vnet' /subscriptions/$(subscriptionId)/resourceGroups/rg-${{ parameters.environment }}-001/providers/Microsoft.Network/virtualNetworks/vnet-dev-canadacentral-002 || echo "Resource already imported"
+                    terraform import azurerm_route_table.this /subscriptions/$(subscriptionId)/resourceGroups/rg-dev-001/providers/Microsoft.Network/routeTables/rt-navigator2 || echo "Resource already imported"
+                    terraform import azurerm_network_security_group.nsg /subscriptions/$(subscriptionId)/resourceGroups/rg-dev-001/providers/Microsoft.Network/networkSecurityGroups/nsg-con-001 || echo "Resource already imported"
+                    terraform import 'module.vnet1.azapi_resource.vnet' /subscriptions/$(subscriptionId)/resourceGroups/rg-dev-001/providers/Microsoft.Network/virtualNetworks/vnet-dev-canadacentral-002 || echo "Resource already imported"
                   displayName: "Import Existing Resources"
                   env:
                     ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
@@ -110,10 +110,10 @@ stages:
                     inlineScript: |
                       cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
                       terraform init -input=false \
-                        -backend-config="resource_group_name=rg-${{ parameters.environment }}-001" \
-                        -backend-config="storage_account_name=tfstate${{ parameters.environment }}" \
+                        -backend-config="resource_group_name=rg-dev-001" \
+                        -backend-config="storage_account_name=tfstatedemonew" \
                         -backend-config="container_name=tfstate" \
-                        -backend-config="key=${{ parameters.folderName }}-${{ parameters.environment }}.tfstate" \
+                        -backend-config="key=terraform.tfstate" \
                         -backend-config="use_azuread_auth=true"
                   env:
                     ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
