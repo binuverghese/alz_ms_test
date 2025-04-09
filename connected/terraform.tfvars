@@ -39,12 +39,12 @@ routes = [
     {
     name           = "KMS1"
     address_prefix = "20.118.99.224/32"
-    next_hop_ip    = "null"
+    next_hop_ip    = null
   },
 {
     name           = "KMS2"
     address_prefix = "40.83.235.53/32"
-    next_hop_ip    = "null"
+    next_hop_ip    = null
   }
 ]
 
