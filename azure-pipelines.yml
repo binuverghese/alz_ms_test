@@ -19,6 +19,15 @@ parameters:
       - "isolated"
       - "isolated_online"
 
+  - name: environment
+    displayName: "Select Environment"
+    type: string
+    default: dev
+    values:
+      - dev
+      - test
+      - prod
+
 variables:
   - group: TerraformSecrets
 
@@ -26,201 +35,106 @@ stages:
   - stage: Terraform_Backend_Setup
     displayName: "Ensure Backend Infra Exists"
     jobs:
-      - job: Create_Backend_Infra
-        displayName: "Create RG + SA + Container If Needed"
+      - job: Create_Backend
+        displayName: "Setup RG, SA, Container"
         pool:
-          vmImage: 'ubuntu-latest'
+          vmImage: ubuntu-latest
         steps:
           - task: AzureCLI@2
-            displayName: "Ensure RG, SA & Container Exist"
+            displayName: "Ensure Backend Infra"
             inputs:
               azureSubscription: "Terraform Deployment Connection_1"
               scriptType: bash
               scriptLocation: inlineScript
               inlineScript: |
-                RG_NAME="rg-dev-001"
-                SA_NAME="tfstatedemonew"
+                RG_NAME="rg-${{ parameters.environment }}-001"
+                SA_NAME="tfstate${{ parameters.environment }}"
                 CONTAINER_NAME="tfstate"
                 LOCATION="Canada Central"
 
-                echo "Checking for resource group..."
+                echo "Creating RG if not exists..."
                 az group show --name $RG_NAME || az group create --name $RG_NAME --location $LOCATION
 
-                echo "Checking for storage account..."
-                az storage account show --name $SA_NAME --resource-group $RG_NAME || az storage account create --name $SA_NAME --resource-group $RG_NAME --location $LOCATION --sku Standard_LRS
+                echo "Creating Storage Account if not exists..."
+                az storage account show --name $SA_NAME --resource-group $RG_NAME || \
+                  az storage account create --name $SA_NAME --resource-group $RG_NAME --location $LOCATION --sku Standard_LRS
 
-                echo "Getting storage key..."
+                echo "Getting key..."
                 KEY=$(az storage account keys list --account-name $SA_NAME --resource-group $RG_NAME --query '[0].value' -o tsv)
 
-                echo "Checking for container..."
+                echo "Creating Container if not exists..."
                 az storage container show --name $CONTAINER_NAME --account-name $SA_NAME --account-key $KEY || \
-                az storage container create --name $CONTAINER_NAME --account-name $SA_NAME --account-key $KEY
+                  az storage container create --name $CONTAINER_NAME --account-name $SA_NAME --account-key $KEY
             env:
               AZURE_DEVOPS_EXT_AZURE_RM_SERVICE_PRINCIPAL_KEY: $(ARM_CLIENT_SECRET)
 
-  - stage: Terraform_Import
-    displayName: "Import Existing Resources"
-    jobs:
-      - job: Import_Terraform_Resources
-        displayName: "Import Resources into TF State"
-        pool:
-          vmImage: 'ubuntu-latest'
-        steps:
-          - checkout: self
-
-          - task: TerraformInstaller@1
-            inputs:
-              terraformVersion: '1.9.2'
-
-          - task: AzureCLI@2
-            displayName: "Terraform Init & Import Resources"
-            inputs:
-              azureSubscription: "Terraform Deployment Connection_1"
-              scriptType: bash
-              scriptLocation: inlineScript
-              inlineScript: |
-                cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
-
-                # Terraform Init
-                terraform init -input=false \
-                  -backend-config="resource_group_name=rg-dev-001" \
-                  -backend-config="storage_account_name=tfstatedemonew" \
-                  -backend-config="container_name=tfstate" \
-                  -backend-config="key=${{ parameters.folderName }}.tfstate" \
-                  -backend-config="use_azuread_auth=true"
-
-                # Fetch the resource group name dynamically
-                echo "Fetching Resource Group..."
-                RG_NAME=$(az group list --query "[?starts_with(name, 'rg-dev-')].name" -o tsv)
-                if [ -z "$RG_NAME" ]; then
-                  echo "Error: No matching Resource Group found."
-                  exit 1
-                fi
-                echo "Found Resource Group: $RG_NAME"
-
-                # Fetch and import NSG dynamically
-                echo "Fetching NSG..."
-                NSG_NAME=$(az network nsg list --resource-group $RG_NAME --query "[].name" -o tsv)
-                if [ -n "$NSG_NAME" ]; then
-                  echo "Found NSG: $NSG_NAME"
-                  terraform state list | grep azurerm_network_security_group.nsg || \
-                    terraform import azurerm_network_security_group.nsg "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$RG_NAME/providers/Microsoft.Network/networkSecurityGroups/$NSG_NAME"
-                else
-                  echo "NSG not found. Skipping import."
-                fi
-
-                # Fetch and import Route Table dynamically
-                echo "Fetching Route Table..."
-                ROUTE_TABLE_NAME=$(az network route-table list --resource-group $RG_NAME --query "[].name" -o tsv)
-                if [ -n "$ROUTE_TABLE_NAME" ]; then
-                  echo "Found Route Table: $ROUTE_TABLE_NAME"
-                  terraform state list | grep azurerm_route_table.this || \
-                    terraform import azurerm_route_table.this "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$RG_NAME/providers/Microsoft.Network/routeTables/$ROUTE_TABLE_NAME"
-                else
-                  echo "Route Table not found. Skipping import."
-                fi
-
-                # Fetch and import Subnet dynamically
-                echo "Fetching VNet..."
-                VNET_NAME=$(az network vnet list --resource-group $RG_NAME --query "[].name" -o tsv)
-                if [ -n "$VNET_NAME" ]; then
-                  echo "Found VNet: $VNET_NAME"
-                  SUBNET_NAME=$(az network vnet subnet list --resource-group $RG_NAME --vnet-name $VNET_NAME --query "[].name" -o tsv)
-                  if [ -n "$SUBNET_NAME" ]; then
-                    echo "Found Subnet: $SUBNET_NAME"
-                    terraform state list | grep module.subnet1 || \
-                      terraform import module.subnet1.azurerm_subnet.subnet "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$RG_NAME/providers/Microsoft.Network/virtualNetworks/$VNET_NAME/subnets/$SUBNET_NAME"
-                  else
-                    echo "Subnet not found. Skipping import."
-                  fi
-                else
-                  echo "VNet not found. Skipping subnet import."
-                fi
-
-                # Import VNet via module if not already in state
-                echo "Importing VNet if exists..."
-                VNET_NAME=$(az network vnet list --resource-group $RG_NAME --query "[?starts_with(name, 'vnet-')].name" -o tsv)
-                if [ -n "$VNET_NAME" ]; then
-                  echo "Found VNet: $VNET_NAME"
-                  terraform state list | grep module.vnet1.azapi_resource.vnet || \
-                    terraform import module.vnet1.azapi_resource.vnet "/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/$RG_NAME/providers/Microsoft.Network/virtualNetworks/$VNET_NAME"
-                else
-                  echo "No matching VNet found. Skipping VNet import."
-                fi
-            env:
-                ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
-                ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
-                ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
-                ARM_TENANT_ID: "$(ARM_TENANT_ID)"
-
-
-
-
   - stage: Terraform_Deployment
-    displayName: "Terraform Deployment"
+    displayName: "Terraform Deploy (${{ parameters.environment }})"
+    dependsOn: Terraform_Backend_Setup
     jobs:
-      - job: Terraform_Deploy
-        displayName: "Terraform Validate, Plan & Apply"
-        pool:
-          vmImage: 'ubuntu-latest'
-        steps:
-          - checkout: self
+      - deployment: TerraformJob
+        environment: ${{ parameters.environment }}
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
 
-          - task: TerraformInstaller@1
-            inputs:
-              terraformVersion: '1.9.2'
+                - task: TerraformInstaller@1
+                  inputs:
+                    terraformVersion: '1.9.2'
 
-          - task: AzureCLI@2
-            displayName: "Terraform Init"
-            inputs:
-              azureSubscription: "Terraform Deployment Connection_1"
-              scriptType: bash
-              scriptLocation: inlineScript
-              inlineScript: |
-                cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
-                terraform init -input=false \
-                  -backend-config="resource_group_name=rg-dev-001" \
-                  -backend-config="storage_account_name=tfstatedemonew" \
-                  -backend-config="container_name=tfstate" \
-                  -backend-config="key=${{ parameters.folderName }}.tfstate" \
-                  -backend-config="use_azuread_auth=true"
-            env:
-              ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
-              ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
-              ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
-              ARM_TENANT_ID: "$(ARM_TENANT_ID)"
+                - task: AzureCLI@2
+                  displayName: "Terraform Init"
+                  inputs:
+                    azureSubscription: "Terraform Deployment Connection_1"
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+                      terraform init -input=false \
+                        -backend-config="resource_group_name=rg-${{ parameters.environment }}-001" \
+                        -backend-config="storage_account_name=tfstate${{ parameters.environment }}" \
+                        -backend-config="container_name=tfstate" \
+                        -backend-config="key=${{ parameters.folderName }}-${{ parameters.environment }}.tfstate" \
+                        -backend-config="use_azuread_auth=true"
+                  env:
+                    ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
+                    ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
+                    ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
+                    ARM_TENANT_ID: "$(ARM_TENANT_ID)"
 
-          - script: |
-              cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
-              terraform validate
-            displayName: "Terraform Validate"
+                - script: |
+                    cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+                    terraform validate
+                  displayName: "Terraform Validate"
 
-          - task: AzureCLI@2
-            displayName: "Terraform Plan"
-            inputs:
-              azureSubscription: "Terraform Deployment Connection_1"
-              scriptType: bash
-              scriptLocation: inlineScript
-              inlineScript: |
-                cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
-                terraform plan -out=tfplan -input=false
-            env:
-              ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
-              ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
-              ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
-              ARM_TENANT_ID: "$(ARM_TENANT_ID)"
+                - task: AzureCLI@2
+                  displayName: "Terraform Plan"
+                  inputs:
+                    azureSubscription: "Terraform Deployment Connection_1"
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+                      terraform plan -out=tfplan -input=false
+                  env:
+                    ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
+                    ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
+                    ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
+                    ARM_TENANT_ID: "$(ARM_TENANT_ID)"
 
-          - task: AzureCLI@2
-            displayName: "Terraform Apply"
-            inputs:
-              azureSubscription: "Terraform Deployment Connection_1"
-              scriptType: bash
-              scriptLocation: inlineScript
-              inlineScript: |
-                cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
-                terraform apply -auto-approve tfplan
-            env:
-              ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
-              ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
-              ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
-              ARM_TENANT_ID: "$(ARM_TENANT_ID)"
+                - task: AzureCLI@2
+                  displayName: "Terraform Apply"
+                  inputs:
+                    azureSubscription: "Terraform Deployment Connection_1"
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+                      terraform apply -auto-approve tfplan
+                  env:
+                    ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
+                    ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
+                    ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
+                    ARM_TENANT_ID: "$(ARM_TENANT_ID)"
