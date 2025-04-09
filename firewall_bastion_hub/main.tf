@@ -76,7 +76,7 @@ resource "azurerm_subnet" "outbound" {
 }
 
 resource "azurerm_resource_group" "rg" {
-  name     = "rg-dev-002"
+  name     = "rg-dev-003"
   location = "Canada Central"
 }
 
