@@ -31,11 +31,6 @@ provider "azurerm" {
   features {}
 }
 
-# Resource Group
-#resource "azurerm_resource_group" "this" {
-#location = "Canada Central"
-#name     = "rg-dev-001"
-#}
 
 # Naming module
 module "naming" {
@@ -117,7 +112,7 @@ module "dns_vnet" {
 module "private_resolver" {
   source                      = "Azure/avm-res-network-dnsresolver/azurerm"
   resource_group_name         = azurerm_resource_group.rg.name
-  name                        = "resolver"
+  name                        = "resolver3"
   virtual_network_resource_id = azurerm_virtual_network.vnet1.id
   location                    = "Canada Central"
 
