@@ -58,6 +58,10 @@ variable "routes" {
     name           = string
     address_prefix = string
     next_hop_ip    = string
+    next_hop_type   = string
   }))
   description = "List of routes for the route table"
 }
+
+
+
