@@ -37,12 +37,12 @@ routes = [
   },
 	
     {
-    name           = "KMS1
+    name           = "KMS1"
     address_prefix = "20.118.99.224/32"
  
   },
 {
-    name           = "KMS2
+    name           = "KMS2"
     address_prefix = "40.83.235.53/32"
     
   }
