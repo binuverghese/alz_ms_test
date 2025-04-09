@@ -44,7 +44,6 @@ provider "azapi" {
   name     = var.resource_group_name
 }
 
-# Route Table (UDR) - Parameterized
 resource "azurerm_route_table" "this" {
   location            = var.location
   name                = var.route_table_name
@@ -53,13 +52,21 @@ resource "azurerm_route_table" "this" {
   dynamic "route" {
     for_each = var.routes
     content {
-      name                   = route.value.name
-      address_prefix         = route.value.address_prefix
-      next_hop_type          = "VirtualAppliance"
-      next_hop_in_ip_address = route.value.next_hop_ip
+      name           = route.value.name
+      address_prefix = route.value.address_prefix
+      next_hop_type  = route.value.next_hop_type
+
+      # Only include next_hop_in_ip_address if next_hop_type is VirtualAppliance
+      dynamic "next_hop_in_ip_address" {
+        for_each = route.value.next_hop_type == "VirtualAppliance" ? [1] : []
+        content {
+          next_hop_in_ip_address = route.value.next_hop_ip
+        }
+      }
     }
   }
 }
+
 
 # Network Security Group (NSG)
 resource "azurerm_network_security_group" "nsg" {
