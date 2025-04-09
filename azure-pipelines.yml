@@ -86,14 +86,27 @@ stages:
 
                 # Import existing resources (skip if already imported)
                 - script: |
-                    echo "Importing existing Azure resources into Terraform state..."
+                    echo "Auto-importing Azure resources into Terraform state..."
                     cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
 
-                    # Example resource imports
-                    terraform import azurerm_route_table.this /subscriptions/$(subscriptionId)/resourceGroups/rg-dev-001/providers/Microsoft.Network/routeTables/rt-navigator2 || echo "Resource already imported"
-                    terraform import azurerm_network_security_group.nsg /subscriptions/$(subscriptionId)/resourceGroups/rg-dev-001/providers/Microsoft.Network/networkSecurityGroups/nsg-con-001 || echo "Resource already imported"
-                    terraform import 'module.vnet1.azapi_resource.vnet' /subscriptions/$(subscriptionId)/resourceGroups/rg-dev-001/providers/Microsoft.Network/virtualNetworks/vnet-dev-canadacentral-002 || echo "Resource already imported"
-                  displayName: "Import Existing Resources"
+                    # List of resources to import
+                    declare -A resources
+                    resources["azurerm_route_table.this"]="/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/routeTables/rt-navigator2"
+                    resources["azurerm_network_security_group.nsg"]="/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/networkSecurityGroups/nsg-con-001"
+                    resources["module.vnet1.azapi_resource.vnet"]="/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/virtualNetworks/vnet-dev-canadacentral-002"
+
+                    for tf_resource in "${!resources[@]}"; do
+                      id="${resources[$tf_resource]}"
+                      
+                      # Check if already in state
+                      if terraform state show "$tf_resource" &>/dev/null; then
+                        echo "$tf_resource already in state. Skipping import."
+                      else
+                        echo "Importing $tf_resource ..."
+                        terraform import "$tf_resource" "$id" || echo "Failed to import $tf_resource"
+                      fi
+                    done
+                  displayName: "Auto-Import Existing Resources"
                   env:
                     ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
                     ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
