@@ -36,7 +36,7 @@ routes = [
   {
     name           = "On-Prem"
     address_prefix = "192.168.0.0/16"
-    next_hop_ip    = null
+    next_hop_ip    = "10.0.0.4"
   },
 
  {
