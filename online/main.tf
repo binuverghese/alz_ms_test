@@ -266,12 +266,7 @@ module "firewall_pip" {
   location            = var.location
 }
 
-module "bastion_pip" {
-  source              = "./modules/public-ip"
-  name                = var.bastion_pip_name
-  resource_group_name = module.resource_group.name
-  location            = var.location
-}
+
 
 variable "name" {
   type = string
@@ -290,6 +285,3 @@ variable "firewall_pip_name" {
   type = string
 }
 
-variable "bastion_pip_name" {
-  type = string
-}
