@@ -1,15 +1,11 @@
+# Provider configuration
 provider "azurerm" {
   features {}
   subscription_id = "1e437fdf-bd78-431d-ba95-1498f0e84c10"
 }
 
-
-
-#variable "appgw_zones" {
- # type = list(string)
-#}
-
-module "resource_group" {
+# Resource Groups
+module "main_resource_group" {
   source  = "./modules/resource-group"
   name    = var.main_rg_name
   location = var.location
@@ -21,18 +17,19 @@ module "appgw_resource_group" {
   location = var.location
 }
 
-#resource "azurerm_resource_group" "rg_appgw_dev" {
-#  name     = var.appgw_rg_name
- # location = var.location
-#}
+module "fw_policy_resource_group" {
+  source  = "./modules/resource-group"
+  name    = var.fw_policy_rg_name
+  location = var.location
+}
 
+# Hub Virtual Network
 module "hub_vnet" {
   source              = "Azure/avm-res-network-virtualnetwork/azurerm"
-  name                = "hub-vnet"
+  name                = var.hub_vnet_name
   address_space       = ["10.0.0.0/16"]
   location            = var.location
-  #resource_group_name = var.resource_group_name
-  resource_group_name = module.resource_group.name
+  resource_group_name = module.main_resource_group.name
   enable_telemetry    = false
 
   subnets = {
@@ -47,68 +44,62 @@ module "hub_vnet" {
   }
 }
 
-module "networking" {
-  source              = "./modules/networking"
-  #resource_group_name = var.resource_group_name
-  resource_group_name = module.resource_group.name
+# Second VNet for Peering
+module "spoke_vnet" {
+  source              = "Azure/avm-res-network-virtualnetwork/azurerm"
+  name                = var.spoke_vnet_name
+  address_space       = ["10.1.0.0/16"]
   location            = var.location
-  virtual_network_name = module.hub_vnet.name 
-  subnets             = {
-    AzureFirewallSubnet = { address_prefixes = ["10.0.0.0/24"] }
-    AppGatewaySubnet    = { address_prefixes = ["10.0.3.0/24"] }
+  resource_group_name = module.main_resource_group.name
+  enable_telemetry    = false
+
+  subnets = {
+    Backend = {
+      name             = "Backend"
+      address_prefixes = ["10.1.1.0/24"]
+    }
   }
 }
 
-module "public_ip" {
+# VNet Peering: Hub to Spoke
+resource "azurerm_virtual_network_peering" "hub_to_spoke" {
+  name                      = "hub-to-spoke"
+  resource_group_name       = module.main_resource_group.name
+  virtual_network_name      = module.hub_vnet.name
+  remote_virtual_network_id = module.spoke_vnet.id
+  allow_forwarded_traffic   = true
+  allow_gateway_transit     = false
+  use_remote_gateways       = false
+}
+
+# VNet Peering: Spoke to Hub
+resource "azurerm_virtual_network_peering" "spoke_to_hub" {
+  name                      = "spoke-to-hub"
+  resource_group_name       = module.main_resource_group.name
+  virtual_network_name      = module.spoke_vnet.name
+  remote_virtual_network_id = module.hub_vnet.id
+  allow_forwarded_traffic   = true
+  allow_gateway_transit     = false
+  use_remote_gateways       = false
+}
+
+# Public IP for App Gateway
+module "public_ip_appgw" {
   source              = "./modules/public-ip"
   name                = var.appgw_public_ip_name
   resource_group_name = module.appgw_resource_group.name
   location            = var.location
 }
 
-resource "azurerm_resource_group" "rg_group" {
-  name     = var.main_rg_name
-  location = var.location
-}
-
-resource "azurerm_public_ip" "public_ip" {
-  name                = var.appgw_public_ip_name
-  resource_group_name = azurerm_resource_group.rg_group.name
-  location            = azurerm_resource_group.rg_group.location
-  allocation_method   = "Static"
-  sku                 = "Standard"
-}
-
-resource "azurerm_virtual_network" "vnet" {
-  name                = "vnet-name"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.rg_group.name
-  address_space       = ["10.0.0.0/16"]
-}
-# resource "azurerm_subnet" "appgw_subnet" {
-#   name                 = "AppGatewaySubnet"
-#   resource_group_name  = azurerm_resource_group.rg_group.name
-#   virtual_network_name = azurerm_virtual_network.vnet.name
-#   address_prefixes     = ["10.0.1.0/24"]
-#   depends_on           = [azurerm_virtual_network.vnet]
-# }
-resource "azurerm_subnet" "backend" {
-  name                 = "backend"
-  resource_group_name  = azurerm_resource_group.rg_group.name
-  virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.0.1.0/24"]
-}
-
+# Application Gateway
 module "application_gateway" {
-  source              = "Azure/avm-res-network-applicationgateway/azurerm"
-  #resource_group_name = azurerm_resource_group.rg_group.name
-  resource_group_name = module.appgw_resource_group.name
-  location            = azurerm_resource_group.rg_group.location
-  enable_telemetry    = var.enable_telemetry
-  public_ip_resource_id = azurerm_public_ip.public_ip.id
-  create_public_ip      = false
-
-  name = var.appgw_name
+  source                   = "Azure/avm-res-network-applicationgateway/azurerm"
+  resource_group_name      = module.appgw_resource_group.name
+  location                 = var.location
+  enable_telemetry         = var.enable_telemetry
+  public_ip_resource_id    = module.public_ip_appgw.id
+  create_public_ip         = false
+  name                     = var.appgw_name
 
   frontend_ip_configuration_public_name = "public-ip-custom-name"
 
@@ -120,13 +111,7 @@ module "application_gateway" {
 
   gateway_ip_configuration = {
     name      = "appGatewayIpConfig"
-    subnet_id = module.networking.appgw_subnet_id
-  }
-
-  tags = {
-    environment = "dev"
-    owner       = "application_gateway"
-    project     = "AVM"
+    subnet_id = module.hub_vnet.subnet_ids["AppGatewaySubnet"]
   }
 
   sku = {
@@ -152,19 +137,19 @@ module "application_gateway" {
   }
 
   backend_address_pools = {
-    appGatewayBackendPool_80 = {
+    pool1 = {
       name         = "app-Gateway-Backend-Pool-80"
       ip_addresses = ["100.64.2.6", "100.64.2.5"]
-    },
-    appGatewayBackendPool_81 = {
+    }
+    pool2 = {
       name  = "app-Gateway-Backend-Pool-81"
       fqdns = ["example1.com", "example2.com"]
     }
   }
 
   backend_http_settings = {
-    appGatewayBackendHttpSettings_80 = {
-      name                  = "app-Gateway-Backend-Http-Settings-80"
+    setting1 = {
+      name                  = "http-setting-80"
       port                  = 80
       protocol              = "Http"
       cookie_based_affinity = "Disabled"
@@ -174,9 +159,9 @@ module "application_gateway" {
         enable_connection_draining = true
         drain_timeout_sec          = 300
       }
-    },
-    appGatewayBackendHttpSettings_81 = {
-      name                  = "app-Gateway-Backend-Http-Settings-81"
+    }
+    setting2 = {
+      name                  = "http-setting-81"
       port                  = 81
       protocol              = "Http"
       cookie_based_affinity = "Disabled"
@@ -190,98 +175,62 @@ module "application_gateway" {
   }
 
   http_listeners = {
-    appGatewayHttpListener_80 = {
-      name                           = "app-Gateway-Http-Listener-80"
+    listener1 = {
+      name                           = "listener-80"
       frontend_ip_configuration_name = "public-ip-custom-name"
-      host_name                      = null
       frontend_port_name             = "port_80"
-    },
-    appGatewayHttpListener_81 = {
-      name                           = "app-Gateway-Http-Listener-81"
+    }
+    listener2 = {
+      name                           = "listener-81"
       frontend_ip_configuration_name = "private-ip-custom-name"
-      host_name                      = null
       frontend_port_name             = "port_81"
     }
   }
 
   request_routing_rules = {
-    routing-rule-1 = {
+    rule1 = {
       name                       = "rule-1"
       rule_type                  = "Basic"
-      http_listener_name         = "app-Gateway-Http-Listener-80"
+      http_listener_name         = "listener-80"
       backend_address_pool_name  = "app-Gateway-Backend-Pool-80"
-      backend_http_settings_name = "app-Gateway-Backend-Http-Settings-80"
+      backend_http_settings_name = "http-setting-80"
       priority                   = 100
-    },
-    routing-rule-2 = {
+    }
+    rule2 = {
       name                       = "rule-2"
       rule_type                  = "Basic"
-      http_listener_name         = "app-Gateway-Http-Listener-81"
+      http_listener_name         = "listener-81"
       backend_address_pool_name  = "app-Gateway-Backend-Pool-81"
-      backend_http_settings_name = "app-Gateway-Backend-Http-Settings-81"
+      backend_http_settings_name = "http-setting-81"
       priority                   = 101
     }
   }
-
- # zones = var.appgw_zones
 }
 
-# Data source to fetch an existing Azure Firewall Policy by name and resource group
-# data "azurerm_firewall_policy" "example" {
-#   name                = "testrgdev002policy"  # Update with your policy name
-#   resource_group_name = "rg-dev-002"  # Update with your resource group
-# }
+# Firewall Policy (Referenced by Firewall Module)
+data "azurerm_firewall_policy" "existing" {
+  name                = var.firewall_policy_name
+  resource_group_name = module.fw_policy_resource_group.name
+}
 
+# Firewall
 module "firewall" {
   source                  = "./modules/firewall"
   name                    = var.firewall_name
-  resource_group_name     = module.resource_group.name
+  resource_group_name     = module.main_resource_group.name
   location                = var.location
   firewall_sku_name       = var.firewall_sku_name
   firewall_sku_tier       = var.firewall_sku_tier
-  #firewall_policy_id      = var.firewall_policy_id
-  firewall_policy_id  = "/subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-002/providers/Microsoft.Network/firewallPolicies/testrgdev002policy"
-
+  firewall_policy_id      = data.azurerm_firewall_policy.existing.id
   firewall_ipconfig_name  = var.firewall_ipconfig_name
-  #subnet_id               = module.networking.subnets["FirewallSubnet"].id
-  subnet_id               = module.networking.subnet_ids["AzureFirewallSubnet"]
+  subnet_id               = module.hub_vnet.subnet_ids["AzureFirewallSubnet"]
   public_ip_address_id    = module.firewall_pip.id
 }
 
-module "bastion" {
-  source                  = "./modules/bastion"
-  name                    = var.bastion_name
-  resource_group_name     = module.resource_group.name
-  location                = var.location
-  ip_config_name          = var.bastion_ip_config_name
-  subnet_id               = module.networking.subnet_ids["AppGatewaySubnet"]
-  public_ip_address_id    = module.bastion_pip.id
-  tags                    = var.tags
-}
-
+# Firewall Public IP
 module "firewall_pip" {
   source              = "./modules/public-ip"
   name                = var.firewall_pip_name
-  resource_group_name = module.resource_group.name
+  resource_group_name = module.main_resource_group.name
   location            = var.location
 }
-
-
-
-variable "name" {
-  type = string
-}
-
-variable "resource_group_name" {
-  type = string
-}
-
-variable "enable_telemetry" {
-  type    = bool
-  default = true
-}
-
-variable "firewall_pip_name" {
-  type = string
-}
-
