@@ -1,1 +1,22 @@
-#variables.tf
+variable "subscription_id" { type = string }
+variable "tenant_id"       { type = string }
+variable "client_id"       { type = string }
+
+variable "location" { type = string }
+variable "resource_group_name" { type = string }
+variable "route_table_name" { type = string }
+variable "nsg_name" { type = string }
+variable "vnet_name" { type = string }
+variable "address_space_vnet1" { type = list(string) }
+variable "dns_servers" { type = list(string) }
+variable "enable_vm_protection" { type = bool }
+variable "subnet_name" { type = string }
+variable "subnet_address_prefixes" { type = list(string) }
+
+variable "routes" {
+  type = list(object({
+    name           = string
+    address_prefix = string
+    next_hop_ip    = string
+  }))
+}
