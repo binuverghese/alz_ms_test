@@ -19,9 +19,9 @@ terraform {
     }
   }
 backend "azurerm" {
-    resource_group_name   = "rg-dev-002"   # The RG where state is stored
-    storage_account_name  = "tfstatedemonew1"     # The storage account name
-    container_name        = "tfstate1"               # The container name
+    resource_group_name   = "rg-dev-001"   # The RG where state is stored
+    storage_account_name  = "tfstatedemonew"     # The storage account name
+    container_name        = "tfstate"               # The container name
     key                   = "terraform.tfstate"     # The name of the state file
   }
 }
@@ -44,7 +44,6 @@ provider "azapi" {
   name     = var.resource_group_name
 }
 
-# Route Table (UDR) - Parameterized
 resource "azurerm_route_table" "this" {
   location            = var.location
   name                = var.route_table_name
@@ -55,11 +54,14 @@ resource "azurerm_route_table" "this" {
     content {
       name                   = route.value.name
       address_prefix         = route.value.address_prefix
-      next_hop_type          = "VirtualAppliance"
+      next_hop_type          = route.value.next_hop_ip != null ? "VirtualAppliance" : "Internet"
       next_hop_in_ip_address = route.value.next_hop_ip
     }
   }
 }
+
+
+
 
 # Network Security Group (NSG)
 resource "azurerm_network_security_group" "nsg" {
