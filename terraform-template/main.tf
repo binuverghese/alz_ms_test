@@ -23,11 +23,13 @@ module "route_table" {
 }
 
 module "nsg" {
-  source = "./modules/nsg"
-  location = var.location
+  source              = "./modules/nsg"
+  location            = var.location
   resource_group_name = var.resource_group_name
-  nsg_name = var.nsg_name
+  nsg_name            = var.nsg_name
+  security_rules      = var.security_rules
 }
+
 
 module "vnet" {
   source = "./modules/vnet"
