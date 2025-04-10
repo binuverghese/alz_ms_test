@@ -85,7 +85,7 @@ stages:
                   inputs:
                     terraformVersion: '1.9.2'
 
-                # Import existing resources (skip if already imported)
+                # Import existing resources 
                 - script: |
                     echo "Auto-importing Azure resources into Terraform state..."
                     cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
