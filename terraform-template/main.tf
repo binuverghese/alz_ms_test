@@ -48,5 +48,7 @@ module "subnet" {
   address_prefixes    = var.subnet_address_prefixes
   route_table_id      = module.route_table.route_table_id
   nsg_id              = module.nsg.nsg_id
+  resource_group_name = var.resource_group_name  
+  vnet_name           = var.vnet_name 
 }
 
