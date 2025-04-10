@@ -50,5 +50,7 @@ module "subnet" {
   nsg_id              = module.nsg.nsg_id
   resource_group_name = var.resource_group_name  
   vnet_name           = var.vnet_name 
+  create_nsg        = true    
+  create_route_table = true
 }
 
