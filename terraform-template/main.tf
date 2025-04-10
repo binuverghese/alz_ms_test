@@ -32,12 +32,12 @@ module "nsg" {
 
 
 module "vnet" {
-  source = "./modules/vnet"
-  location = var.location
+  source              = "./modules/vnet"
+  name                = var.vnet_name  
   resource_group_name = var.resource_group_name
-  vnet_name = var.vnet_name
-  address_space = var.address_space_vnet1
-  dns_servers = var.dns_servers
+  location            = var.location
+  address_space       = var.address_space_vnet1
+  dns_servers         = var.dns_servers
   enable_vm_protection = var.enable_vm_protection
 }
 
