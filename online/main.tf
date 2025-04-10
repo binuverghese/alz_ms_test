@@ -223,7 +223,7 @@ module "application_gateway" {
     }
   }
 
-  zones = var.appgw_zones
+ # zones = var.appgw_zones
 }
 
 # Data source to fetch an existing Azure Firewall Policy by name and resource group
