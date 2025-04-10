@@ -4,8 +4,8 @@ variable "client_id"       { type = string }
 
 variable "location" { type = string }
 variable "resource_group_name" { type = string }
-variable "route_table_name" { type = string }
-variable "nsg_name" { type = string }
+#variable "route_table_name" { type = string }
+#variable "nsg_name" { type = string }
 variable "vnet_name" { type = string }
 variable "address_space_vnet1" { type = list(string) }
 variable "dns_servers" { type = list(string) }
@@ -34,4 +34,13 @@ variable "security_rules" {
     destination_address_prefix = string
   }))
   default = []
+}
+variable "create_nsg" {
+  type    = bool
+  default = true  # Set based on your needs
+}
+
+variable "create_route_table" {
+  type    = bool
+  default = true  # Set based on your needs
 }
