@@ -1,14 +1,14 @@
 location         = "Canada Central"
 
-main_rg_name     = "rg-dev-003"
-appgw_rg_name    = "rg-appgw-dev"
+main_rg_name     = "rg-dev-006"
+appgw_rg_name    = "rg-appgw-dev6"
 
-bastion_pip_name = "bastionpiptest"
-firewall_pip_name = "firewallpiptest"
-firewall_policy_name = "firewalltesting"
+bastion_pip_name = "bastionpiptest6"
+firewall_pip_name = "firewallpiptest6"
+firewall_policy_name = "firewalltesting6"
 
-name               = "my-resource-group"
-resource_group_name = "my-resource-group"
+name               = "my-resource-group6"
+resource_group_name = "my-resource-group6"
 
 hub_vnet_address_space = ["10.0.0.0/16"]
 
@@ -23,7 +23,7 @@ hub_subnets = {
   }
 }
 
-appgw_name = "appgw-dev-001"
+appgw_name = "appgw-dev-006"
 
 appgw_sku = {
   name     = "WAF_v2"
@@ -38,20 +38,20 @@ appgw_backend_addresses = [
 
 appgw_zones = [1, 2, 3]
 
-appgw_public_ip_name = "appgw-pip"
+appgw_public_ip_name = "appgw-pip6"
 
 # Firewall
-firewall_name           = "fw-dev"
-firewall_public_ip_name = "fw-pip"
-firewall_sku_name       = "AZFW_VNet"
+firewall_name           = "fw-dev6"
+firewall_public_ip_name = "fw-pip6"
+firewall_sku_name       = "AZFW_VNet6"
 firewall_sku_tier       = "Standard"
 firewall_ipconfig_name  = "fw-ipconfig"
 firewall_policy_id      = ""  # Fill this in with actual Firewall Policy ID
 
 # Bastion
-bastion_name             = "bastion-dev"
-bastion_public_ip_name   = "bastion-pip"
-bastion_ip_config_name   = "bastion-ipconfig"
+bastion_name             = "bastion-dev6"
+bastion_public_ip_name   = "bastion-pip6"
+bastion_ip_config_name   = "bastion-ipconfig6"
 
 tags = {
   environment = "dev"
