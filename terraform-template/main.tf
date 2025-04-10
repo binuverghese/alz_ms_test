@@ -42,11 +42,11 @@ module "vnet" {
 }
 
 module "subnet" {
-  source = "./modules/subnet"
-  subnet_name = var.subnet_name
-  address_prefixes = var.subnet_address_prefixes
-  virtual_network_id = module.vnet.vnet_id
-  route_table_id = module.route_table.route_table_id
-  nsg_id = module.nsg.nsg_id
+  source              = "./modules/subnet"
+  vnet_id             = module.vnet.vnet_id
+  subnet_name         = var.subnet_name
+  address_prefixes    = var.subnet_address_prefixes
+  route_table_id      = module.route_table.route_table_id
+  nsg_id              = module.nsg.nsg_id
 }
 
