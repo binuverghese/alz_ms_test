@@ -1,60 +1,65 @@
 variable "name" {
-  description = "Name of the Bastion host"
   type        = string
+  description = "Name of the Bastion host"
 }
 
 variable "location" {
-  description = "Azure region"
   type        = string
+  description = "Azure region"
 }
 
 variable "resource_group_name" {
-  description = "Name of the resource group"
   type        = string
+  description = "Resource group name"
 }
 
 variable "public_ip_id" {
-  description = "ID of the public IP"
   type        = string
+  description = "ID of the Bastion public IP"
 }
 
 variable "subnet_id" {
-  description = "ID of the AzureBastionSubnet"
   type        = string
+  description = "ID of the AzureBastionSubnet"
 }
 
 variable "dns_name" {
-  description = "Optional DNS name label"
   type        = string
   default     = null
-}
-
-variable "ip_connect_enabled" {
-  description = "Enable IP-based connection"
-  type        = bool
-  default     = true
+  description = "DNS name label"
 }
 
 variable "scale_units" {
-  description = "Number of scale units"
   type        = number
   default     = 2
 }
 
+variable "ip_connect_enabled" {
+  type        = bool
+  default     = true
+}
+
 variable "tunneling_enabled" {
-  description = "Enable tunneling"
   type        = bool
   default     = true
 }
 
 variable "kerberos_enabled" {
-  description = "Enable Kerberos authentication"
+  type        = bool
+  default     = false
+}
+
+variable "copy_paste_enabled" {
+  type        = bool
+  default     = true
+}
+
+variable "file_copy_enabled" {
   type        = bool
   default     = true
 }
 
 variable "tags" {
-  description = "Tags to apply to the Bastion host"
   type        = map(string)
   default     = {}
 }
