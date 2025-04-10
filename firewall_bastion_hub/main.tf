@@ -83,36 +83,25 @@ module "bastion_vnet" {
 
 
 module "bastion" {
-  source               = "./modules/bastion"
-  name                 = var.bastion_name
-  location             = var.location
-  resource_group_name  = azurerm_resource_group.rg.name
-
-  # DNS Name (public DNS name for Bastion)
-  dns_name             = "${var.bastion_name}-${azurerm_resource_group.rg.location}.bastion.azure.com"  # Adjust DNS name as per your requirements
-
-  # Subnet ID (Azure Bastion Subnet)
-  subnet_id            = module.bastion_vnet.subnets["AzureBastionSubnet"].id  # Reference the correct subnet for Bastion
-
-  ip_configuration = {
-    name                 = "bastion-ipconfig"
-    subnet_id            = module.bastion_vnet.subnets["AzureBastionSubnet"].id  # Ensure using the AzureBastionSubnet
-    public_ip_address_id = module.bastion_ip.public_ip_id  # Reference the public IP created by the bastion_ip module
-    create_public_ip     = false  # Set this to false as you are providing an external public IP
-  }
-
-  # Optional Bastion Host Configuration
-  copy_paste_enabled   = true
-  file_copy_enabled    = false
-  ip_connect_enabled   = true
-  scale_units          = 2
-  tunneling_enabled    = true
-  kerberos_enabled     = true
-
+  source              = "./modules/bastion"
+  name                = var.bastion_host_name
+  location            = var.location
+  resource_group_name = azurerm_resource_group.rg.name
+  public_ip_id        = azurerm_public_ip.bastion.id
+  subnet_id           = module.bastion_vnet.subnet_ids["AzureBastionSubnet"]
+  dns_name            = var.bastion_dns_name
+  scale_units         = 2
+  ip_connect_enabled  = true
+  tunneling_enabled   = true
+  kerberos_enabled    = false
+  copy_paste_enabled  = true
+  file_copy_enabled   = false
   tags = {
-    environment = "development"
+    environment = "dev"
+    owner       = "networking"
   }
 }
+
 
 # Create the Public IP for Bastion
 resource "azurerm_public_ip" "bastion_ip" {
