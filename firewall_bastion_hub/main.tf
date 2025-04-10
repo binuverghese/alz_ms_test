@@ -29,7 +29,7 @@ module "hub_vnet" {
   resource_group_name = azurerm_resource_group.rg.name
   address_space       = var.hub_vnet_address_space
   subnets             = var.hub_vnet_subnets
-  virtual_network_name = module.dns_vnet.name
+  #virtual_network_name = module.dns_vnet.name
 
 }
 
