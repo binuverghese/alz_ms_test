@@ -1,7 +1,14 @@
 location         = "Canada Central"
 
-main_rg_name     = "rg-dev-002"
+main_rg_name     = "rg-dev-003"
 appgw_rg_name    = "rg-appgw-dev"
+
+bastion_pip_name = "bastionpiptest"
+firewall_pip_name = "firewallpiptest"
+firewall_policy_name = "firewalltesting"
+
+name               = "my-resource-group"
+resource_group_name = "my-resource-group"
 
 hub_vnet_address_space = ["10.0.0.0/16"]
 
