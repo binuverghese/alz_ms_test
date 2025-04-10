@@ -45,8 +45,8 @@ module "dns_resolver" {
   name                        = var.dns_resolver_name
   location                    = var.location
   resource_group_name         = azurerm_resource_group.rg.name
-  virtual_network_resource_id = module.dns_vnet.vnet_id
-
+  #virtual_network_resource_id = module.dns_vnet.vnet_id
+  virtual_network_id          = azurerm_virtual_network.vnet1.id 
   inbound_endpoints = {
     inbound1 = {
       name        = "inbound1"
