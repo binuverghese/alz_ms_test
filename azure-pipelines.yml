@@ -85,50 +85,50 @@ stages:
                   inputs:
                     terraformVersion: '1.9.2'
 
-                # Import existing resources 
-                - script: |
-                    echo "Auto-importing Azure resources into Terraform state..."
-                    cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
+                # # Import existing resources 
+                # - script: |
+                #     echo "Auto-importing Azure resources into Terraform state..."
+                #     cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
 
-                    # List of resources to import
-                    #  declare -A resources
-                    #  resources["azurerm_route_table.this"]="/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/routeTables/rt-navigator2"
-                    #  resources["azurerm_network_security_group.nsg"]="/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/networkSecurityGroups/nsg-con-001"
-                    #  resources["module.vnet1.azapi_resource.vnet"]="/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/virtualNetworks/vnet-dev-canadacentral-002"
-                    #  resources["module.route_table.azurerm_subnet_route_table_association.assoc"]= "/subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-009/providers/Microsoft.Network/virtualNetworks/vnet-dev-canadacentral-009/subnets/snet-dev-canadacentral-009"
+                #     # List of resources to import
+                #     #  declare -A resources
+                #     #  resources["azurerm_route_table.this"]="/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/routeTables/rt-navigator2"
+                #     #  resources["azurerm_network_security_group.nsg"]="/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/networkSecurityGroups/nsg-con-001"
+                #     #  resources["module.vnet1.azapi_resource.vnet"]="/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/virtualNetworks/vnet-dev-canadacentral-002"
+                #     #  resources["module.route_table.azurerm_subnet_route_table_association.assoc"]= "/subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-009/providers/Microsoft.Network/virtualNetworks/vnet-dev-canadacentral-009/subnets/snet-dev-canadacentral-009"
 
-                    # for tf_resource in "${!resources[@]}"; do
-                    #   id="${resources[$tf_resource]}"
+                #     # for tf_resource in "${!resources[@]}"; do
+                #     #   id="${resources[$tf_resource]}"
 
-                    #   # Check if already in state
-                    #   if terraform state show "$tf_resource" &>/dev/null; then
-                    #     echo "$tf_resource already in state. Skipping import."
-                    #   else
-                    #     echo "Importing $tf_resource ..."
-                    #     terraform import "$tf_resource" "$id" || echo "Failed to import $tf_resource"
-                    #   fi
-                    # done
-                    IMPORT_FILE="import-map-${{ parameters.environment }}.json"
-                      if [ -f "$IMPORT_FILE" ]; then
-                        while IFS="=" read -r tf_resource id; do
-                          tf_resource=$(echo $tf_resource | xargs)
-                          id=$(echo $id | xargs | tr -d '"')
-                          if terraform state show "$tf_resource" &>/dev/null; then
-                            echo "$tf_resource already in state."
-                          else
-                            echo "Importing $tf_resource..."
-                            terraform import "$tf_resource" "$id" || echo "Failed to import $tf_resource"
-                          fi
-                        done < <(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$IMPORT_FILE")
-                      else
-                        echo "No import map file found. Skipping imports."
-                      fi
-                  displayName: "Auto-Import Existing Resources"
-                  env:
-                    ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
-                    ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
-                    ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
-                    ARM_TENANT_ID: "$(ARM_TENANT_ID)"
+                #     #   # Check if already in state
+                #     #   if terraform state show "$tf_resource" &>/dev/null; then
+                #     #     echo "$tf_resource already in state. Skipping import."
+                #     #   else
+                #     #     echo "Importing $tf_resource ..."
+                #     #     terraform import "$tf_resource" "$id" || echo "Failed to import $tf_resource"
+                #     #   fi
+                #     # done
+                #     IMPORT_FILE="import-map-${{ parameters.environment }}.json"
+                #       if [ -f "$IMPORT_FILE" ]; then
+                #         while IFS="=" read -r tf_resource id; do
+                #           tf_resource=$(echo $tf_resource | xargs)
+                #           id=$(echo $id | xargs | tr -d '"')
+                #           if terraform state show "$tf_resource" &>/dev/null; then
+                #             echo "$tf_resource already in state."
+                #           else
+                #             echo "Importing $tf_resource..."
+                #             terraform import "$tf_resource" "$id" || echo "Failed to import $tf_resource"
+                #           fi
+                #         done < <(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$IMPORT_FILE")
+                #       else
+                #         echo "No import map file found. Skipping imports."
+                #       fi
+                #   displayName: "Auto-Import Existing Resources"
+                #   env:
+                #     ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
+                #     ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
+                #     ARM_SUBSCRIPTION_ID: "$(ARM_SUBSCRIPTION_ID)"
+                #     ARM_TENANT_ID: "$(ARM_TENANT_ID)"
                 
 
                 # Terraform Init
