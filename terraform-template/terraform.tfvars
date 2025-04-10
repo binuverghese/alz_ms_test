@@ -4,6 +4,11 @@ subnet_name             = "snet-dev-canadacentral-008"
 subnet_address_prefixes = ["10.1.0.0/28"]
 enable_vm_protection    = true
 encryption              = false
+route_table_name        = "rt-navigator8"
+nsg_name                = "nsg-con-008"
+address_space_vnet1     = ["10.1.0.0/24"]
+dns_servers             = ["10.0.2.4"]
+
 security_rules = [
   {
     name                       = "DenyAllInbound"
