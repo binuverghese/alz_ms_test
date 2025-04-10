@@ -3,6 +3,7 @@ resource "azurerm_subnet" "this" {
   resource_group_name  = var.resource_group_name
   virtual_network_name = var.vnet_name
   address_prefixes     = var.address_prefixes
+  depends_on = azure
 }
 
 resource "azurerm_subnet_network_security_group_association" "this" {
