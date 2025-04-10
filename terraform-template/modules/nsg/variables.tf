@@ -26,5 +26,6 @@ variable "security_rules" {
     destination_address_prefix = string
     destination_port_range     = string
   }))
+    description = "List of security rules"
 }
 
