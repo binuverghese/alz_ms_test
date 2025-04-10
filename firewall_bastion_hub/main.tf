@@ -114,6 +114,15 @@ module "bastion" {
   }
 }
 
+# Create the Public IP for Bastion
+resource "azurerm_public_ip" "bastion_ip" {
+  name                = var.bastion_ip_name
+  location            = var.location
+  resource_group_name = azurerm_resource_group.rg.name
+  allocation_method   = "Static"
+  domain_name_label   = "${var.bastion_name}-${azurerm_resource_group.rg.location}"
+}
+
 module "firewall" {
   source              = "./modules/firewall"
   name                = var.firewall_name
