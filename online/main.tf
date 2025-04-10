@@ -21,10 +21,10 @@ module "appgw_resource_group" {
   location = var.location
 }
 
-resource "azurerm_resource_group" "rg_appgw_dev" {
-  name     = var.appgw_rg_name
-  location = var.location
-}
+#resource "azurerm_resource_group" "rg_appgw_dev" {
+#  name     = var.appgw_rg_name
+ # location = var.location
+#}
 
 module "hub_vnet" {
   source              = "Azure/avm-res-network-virtualnetwork/azurerm"
