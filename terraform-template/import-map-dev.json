@@ -1,0 +1,15 @@
+{
+  "module.rg.azurerm_resource_group.this": "/subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-009",
+
+  "module.vnet.azurerm_virtual_network.this": "/subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-009/providers/Microsoft.Network/virtualNetworks/vnet-dev-canadacentral-009",
+
+  "module.subnet.azurerm_subnet.this": "/subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-009/providers/Microsoft.Network/virtualNetworks/vnet-dev-canadacentral-009/subnets/snet-dev-canadacentral-009",
+
+  "module.route_table.azurerm_route_table.this": "/subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-009/providers/Microsoft.Network/routeTables/rt-dev-canadacentral-009",
+
+  "module.route_table.azurerm_subnet_route_table_association.assoc": "/subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-009/providers/Microsoft.Network/virtualNetworks/vnet-dev-canadacentral-009/subnets/snet-dev-canadacentral-009",
+
+  "module.nsg.azurerm_network_security_group.this": "/subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-009/providers/Microsoft.Network/networkSecurityGroups/nsg-dev-canadacentral-009",
+
+  "module.nsg.azurerm_subnet_network_security_group_association.this": "/subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-009/providers/Microsoft.Network/virtualNetworks/vnet-dev-canadacentral-009/subnets/snet-dev-canadacentral-009"
+}
