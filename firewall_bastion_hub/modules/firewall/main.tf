@@ -17,6 +17,13 @@ resource "azurerm_firewall" "this" {
     }
   }
 }
+resource "azurerm_public_ip" "firewall_pip" {
+  name                = var.firewall_pip_name
+  location            = var.location
+  resource_group_name = azurerm_resource_group.rg.name
+  allocation_method   = "Static"
+  sku                 = "Standard"
+}
 
 output "firewall_private_ip" {
   value = azurerm_firewall.this.ip_configuration[0].private_ip_address
