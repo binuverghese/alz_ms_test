@@ -13,9 +13,20 @@ firewall_sku_tier      = "Standard"
 firewall_sku_name      = "AZFW_VNet"
 firewall_ipconfig_name = "firewall-ipconfig"
 
-# Bastion Resources
-bastion_ip_name   = "bastion-public-ip"
-bastion_host_name = "bastion-host"
+# bastion_vnet module variables
+bastion_vnet_name          = "bastion-vnet"
+bastion_vnet_address_space = ["10.0.0.0/16"]
+bastion_vnet_subnets = {
+  subnet1 = {
+    name           = "subnet1"
+    address_prefix = "10.0.0.0/24"
+  },
+}
+
+# bastion module variables
+bastion_name              = "bastion-host"
+location                 = "Canada Central"
+bastion_ip_name          = "bastion-public-ip"
 
 # DNS VNet Resources
 dns_vnet_name = "dns-vnet"
@@ -23,5 +34,4 @@ dns_vnet_name = "dns-vnet"
 # Hub VNet Resources
 hub_vnet_name = "hub-vnet"
 
-# Bastion VNet Resources
-bastion_vnet_name = "bastion-vnet"
+
