@@ -91,10 +91,11 @@ stages:
                     cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
 
                     # List of resources to import
-                    # declare -A resources
-                    # resources["azurerm_route_table.this"]="/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/routeTables/rt-navigator2"
-                    # resources["azurerm_network_security_group.nsg"]="/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/networkSecurityGroups/nsg-con-001"
-                    # resources["module.vnet1.azapi_resource.vnet"]="/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/virtualNetworks/vnet-dev-canadacentral-002"
+                     declare -A resources
+                     resources["azurerm_route_table.this"]="/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/routeTables/rt-navigator2"
+                     resources["azurerm_network_security_group.nsg"]="/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/networkSecurityGroups/nsg-con-001"
+                     resources["module.vnet1.azapi_resource.vnet"]="/subscriptions/$(ARM_SUBSCRIPTION_ID)/resourceGroups/rg-dev-001/providers/Microsoft.Network/virtualNetworks/vnet-dev-canadacentral-002"
+                     resources["module.route_table.azurerm_subnet_route_table_association.assoc"]= "/subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/rg-dev-009/providers/Microsoft.Network/virtualNetworks/vnet-dev-canadacentral-009/subnets/snet-dev-canadacentral-009"
 
                     # for tf_resource in "${!resources[@]}"; do
                     #   id="${resources[$tf_resource]}"
