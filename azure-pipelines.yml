@@ -140,12 +140,12 @@ stages:
                     scriptLocation: inlineScript
                     inlineScript: |
                       cd $(Build.SourcesDirectory)/${{ parameters.folderName }}
-                      terraform init -input=false \
-                        -backend-config="resource_group_name=rg-dev-001" \
-                        -backend-config="storage_account_name=tfstatedemonew" \
-                        -backend-config="container_name=tfstate" \
-                        -backend-config="key=terraform.tfstate" \
-                        -backend-config="use_azuread_auth=true"
+                      terraform init -input=false 
+                        # -backend-config="resource_group_name=rg-dev-001" \
+                        # -backend-config="storage_account_name=tfstatedemonew" \
+                        # -backend-config="container_name=tfstate" \
+                        # # -backend-config="key=terraform.tfstate" \
+                        # -backend-config="use_azuread_auth=true"
                   env:
                     ARM_CLIENT_ID: "$(ARM_CLIENT_ID)"
                     ARM_CLIENT_SECRET: "$(ARM_CLIENT_SECRET)"
