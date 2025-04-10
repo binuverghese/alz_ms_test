@@ -14,9 +14,12 @@ resource "azurerm_firewall_policy" "firewall_policy" {
 }
 
 module "firewall" {
-  source              = "Azure/avm-res-network-azurefirewall/azurerm"
+  source              = "./modules/firewall"
   name                = var.firewall_name
   location            = var.location
-  resource_group_name = var.resource_group_name
-  firewall_policy_id  = azurerm_firewall_policy.firewall_policy.id
+  resource_group_name = azurerm_resource_group.rg.name
+  firewall_ip         = var.firewall_ip
+  firewall_policy_id  = module.firewall_policy.firewall_policy_id
+  firewall_sku_tier   = var.firewall_sku_tier  # Pass SKU tier
+  firewall_sku_name   = var.firewall_sku_name  # Pass SKU name
 }
