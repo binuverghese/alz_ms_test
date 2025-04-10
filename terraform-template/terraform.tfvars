@@ -7,6 +7,12 @@ encryption              = false
 route_table_name        = "rt-navigator8"
 nsg_name                = "nsg-con-008"
 address_space_vnet1     = ["10.1.0.0/24"]
+
+subscription_id = "1e437fdf-bd78-431d-ba95-1498f0e84c10"
+tenant_id       = "35db3582-96af-4081-a32c-7bbaa2cf3ca9"
+client_id       = "ec375efa-27ef-4631-834f-05ddec12a417"
+location        = "canadacentral"  # Replace with your desired location
+
 dns_servers             = ["10.0.2.4"]
 
 security_rules = [
