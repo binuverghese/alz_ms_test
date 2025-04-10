@@ -34,7 +34,7 @@ module "vnet" {
   location = var.location
   resource_group_name = var.resource_group_name
   vnet_name = var.vnet_name
-  address_space_vnet1 = var.address_space_vnet1
+  address_space_vnet = var.address_space_vnet1
   dns_servers = var.dns_servers
   enable_vm_protection = var.enable_vm_protection
 }
