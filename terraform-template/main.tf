@@ -52,5 +52,6 @@ module "subnet" {
   vnet_name           = var.vnet_name 
   create_nsg        = true    
   create_route_table = true
+  depends_on = [module.vnet]
 }
 
