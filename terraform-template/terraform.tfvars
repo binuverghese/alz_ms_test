@@ -1,11 +1,11 @@
-resource_group_name     = "rg-dev-009"
-vnet_name               = "vnet-dev-canadacentral-009"
-subnet_name             = "snet-dev-canadacentral-009"
+resource_group_name     = "rg-dev-010"
+vnet_name               = "vnet-dev-canadacentral-010"
+subnet_name             = "snet-dev-canadacentral-010"
 subnet_address_prefixes = ["10.1.0.0/28"]
 enable_vm_protection    = true
 encryption              = false
-route_table_name        = "rt-navigator9"
-nsg_name                = "nsg-con-009"
+route_table_name        = "rt-navigator10"
+nsg_name                = "nsg-con-0010"
 address_space_vnet1     = ["10.1.0.0/24"]
 
 create_nsg        = true
