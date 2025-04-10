@@ -8,6 +8,8 @@ route_table_name        = "rt-navigator8"
 nsg_name                = "nsg-con-008"
 address_space_vnet1     = ["10.1.0.0/24"]
 
+create_nsg        = true
+create_route_table = true
 
 
 subscription_id = "1e437fdf-bd78-431d-ba95-1498f0e84c10"
