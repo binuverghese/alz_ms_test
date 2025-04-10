@@ -33,3 +33,14 @@ variable "vnet_name" {
   type        = string
   description = "The virtual network name"
 }
+variable "create_nsg" {
+  description = "Flag to indicate if a Network Security Group (NSG) should be created"
+  type        = bool
+  default     = true  # Set this to false if you don't want to create the NSG
+}
+
+variable "create_route_table" {
+  description = "Flag to indicate if a Route Table should be created"
+  type        = bool
+  default     = true  # Set this to false if you don't want to create the Route Table
+}
