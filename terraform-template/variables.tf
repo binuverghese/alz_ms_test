@@ -44,3 +44,12 @@ variable "create_route_table" {
   type    = bool
   default = true  # Set based on your needs
 }
+variable "route_table_name" {
+  description = "The name of the route table"
+  type        = string
+}
+
+variable "nsg_name" {
+  description = "The name of the Network Security Group"
+  type        = string
+}
