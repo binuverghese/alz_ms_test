@@ -1,13 +1,19 @@
-variable "vnet_name" {}
-variable "address_space" {
-  type = list(string)
-}
-variable "location" {}
-variable "resource_group_name" {}
-variable "dns_servers" {
-  type = list(string)
-}
-variable "enable_vm_protection" {
-  type = bool
+variable "name" {
+  type        = string
+  description = "Name of the virtual network"
 }
 
+variable "resource_group_name" {
+  type        = string
+  description = "Resource group name"
+}
+
+variable "location" {
+  type        = string
+  description = "Location"
+}
+
+variable "address_space" {
+  type        = list(string)
+  description = "The address space that is used the virtual network"
+}
