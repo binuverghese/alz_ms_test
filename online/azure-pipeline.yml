@@ -37,7 +37,15 @@ stages:
                 LOCATION="Canada Central"
 
                 echo "Ensuring Resource Group exists..."
-                az group show --name $RG_NAME || az group create --name $RG_NAME --location $LOCATION
+                # Check if the resource group exists
+                rg_exists=$(az group show --name $RG_NAME --query "name" -o tsv)
+                if [ -z "$rg_exists" ]; then
+                  echo "Resource Group does not exist. Creating resource group..."
+                  az group create --name $RG_NAME --location $LOCATION
+                else
+                  echo "Resource Group $RG_NAME already exists. Importing into Terraform state..."
+                  terraform import azurerm_resource_group.rg_appgw_dev /subscriptions/$(az account show --query id -o tsv)/resourceGroups/$RG_NAME
+                fi
 
                 echo "Ensuring Storage Account exists..."
                 az storage account show --name $SA_NAME --resource-group $RG_NAME || \
