@@ -18,6 +18,7 @@ parameters:
       - "connected_online"
       - "isolated"
       - "isolated_online"
+      - "terraform-template"
 
   - name: environment
     displayName: "Select Environment"
