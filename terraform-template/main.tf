@@ -19,6 +19,7 @@ module "route_table" {
   resource_group_name = var.resource_group_name
   route_table_name = var.route_table_name
   routes = var.routes
+  subnet_id           = module.subnet.subnet_id
 }
 
 module "nsg" {
