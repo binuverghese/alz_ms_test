@@ -4,6 +4,7 @@ provider "azurerm" {
 }
 
 
+
 variable "appgw_zones" {
   type = list(string)
 }
@@ -20,13 +21,18 @@ module "appgw_resource_group" {
   location = var.location
 }
 
+resource "azurerm_resource_group" "rg_appgw_dev" {
+  name     = var.appgw_rg_name
+  location = var.location
+}
 
 module "hub_vnet" {
   source              = "Azure/avm-res-network-virtualnetwork/azurerm"
   name                = "hub-vnet"
   address_space       = ["10.0.0.0/16"]
   location            = var.location
-  resource_group_name = var.resource_group_name
+  #resource_group_name = var.resource_group_name
+  resource_group_name = module.resource_group.name
   enable_telemetry    = false
 
   subnets = {
@@ -43,7 +49,8 @@ module "hub_vnet" {
 
 module "networking" {
   source              = "./modules/networking"
-  resource_group_name = var.resource_group_name
+  #resource_group_name = var.resource_group_name
+  resource_group_name = module.resource_group.name
   location            = var.location
   virtual_network_name = module.hub_vnet.name 
   subnets             = {
@@ -78,7 +85,13 @@ resource "azurerm_virtual_network" "vnet" {
   resource_group_name = azurerm_resource_group.rg_group.name
   address_space       = ["10.0.0.0/16"]
 }
-
+# resource "azurerm_subnet" "appgw_subnet" {
+#   name                 = "AppGatewaySubnet"
+#   resource_group_name  = azurerm_resource_group.rg_group.name
+#   virtual_network_name = azurerm_virtual_network.vnet.name
+#   address_prefixes     = ["10.0.1.0/24"]
+#   depends_on           = [azurerm_virtual_network.vnet]
+# }
 resource "azurerm_subnet" "backend" {
   name                 = "backend"
   resource_group_name  = azurerm_resource_group.rg_group.name
@@ -88,7 +101,8 @@ resource "azurerm_subnet" "backend" {
 
 module "application_gateway" {
   source              = "Azure/avm-res-network-applicationgateway/azurerm"
-  resource_group_name = azurerm_resource_group.rg_group.name
+  #resource_group_name = azurerm_resource_group.rg_group.name
+  resource_group_name = module.appgw_resource_group.name
   location            = azurerm_resource_group.rg_group.location
   enable_telemetry    = var.enable_telemetry
   public_ip_resource_id = azurerm_public_ip.public_ip.id
