@@ -38,7 +38,7 @@ module "vnet" {
   location            = var.location
   address_space       = var.address_space_vnet1
   dns_servers         = var.dns_servers
-  
+  enable_vm_protection = var.enable_vm_protection
 }
 
 module "subnet" {
