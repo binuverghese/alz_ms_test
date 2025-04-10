@@ -39,6 +39,28 @@ module "dns_vnet" {
   address_space       = var.dns_vnet_address_space
   subnets             = var.dns_vnet_subnets
 }
+# DNS Resolver Module
+module "dns_resolver" {
+  source                      = "./modules/dns_resolver"
+  name                        = var.dns_resolver_name
+  location                    = var.location
+  resource_group_name         = azurerm_resource_group.rg.name
+  virtual_network_resource_id = module.dns_vnet.vnet_id
+
+  inbound_endpoints = {
+    inbound1 = {
+      name        = "inbound1"
+      subnet_name = azurerm_subnet.inbound.name
+    }
+  }
+
+  outbound_endpoints = {
+    outbound1 = {
+      name        = "outbound1"
+      subnet_name = azurerm_subnet.outbound.name
+    }
+  }
+}
 
 module "bastion_vnet" {
   source              = "./modules/vnet"
