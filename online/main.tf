@@ -5,9 +5,9 @@ provider "azurerm" {
 
 
 
-variable "appgw_zones" {
-  type = list(string)
-}
+#variable "appgw_zones" {
+ # type = list(string)
+#}
 
 module "resource_group" {
   source  = "./modules/resource-group"
