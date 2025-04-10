@@ -71,13 +71,6 @@ module "bastion_vnet" {
   subnets             = var.bastion_vnet_subnets
 }
 
-module "dns_resolver" {
-  source              = "./modules/dns_resolver"
-  name                = var.dns_resolver_name
-  location            = var.location
-  resource_group_name = azurerm_resource_group.rg.name
-  virtual_network_id  = module.dns_vnet.vnet_id
-}
 
 module "firewall" {
   source              = "./modules/firewall"
