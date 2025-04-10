@@ -5,15 +5,25 @@ variable "name" {
 
 variable "resource_group_name" {
   type        = string
-  description = "Resource group name"
+  description = "Name of the resource group"
 }
 
 variable "location" {
   type        = string
-  description = "Location"
+  description = "Azure region"
 }
 
 variable "address_space" {
   type        = list(string)
-  description = "The address space that is used the virtual network"
+  description = "The address space for the virtual network"
+}
+
+variable "dns_servers" {
+  type        = list(string)
+  description = "List of DNS servers"
+}
+
+variable "enable_vm_protection" {
+  type        = bool
+  description = "Enable VM protection"
 }
