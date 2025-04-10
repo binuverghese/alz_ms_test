@@ -36,7 +36,7 @@ appgw_backend_addresses = [
   { ip_address = "10.1.1.5" }
 ]
 
-appgw_zones = [1, 2, 3]
+#appgw_zones = [1, 2, 3]
 
 appgw_public_ip_name = "appgw-pip6"
 
