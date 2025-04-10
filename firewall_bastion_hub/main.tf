@@ -75,12 +75,19 @@ module "bastion_vnet" {
 module "firewall" {
   source              = "./modules/firewall"
   name                = var.firewall_name
-  location            = var.location
+  location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  firewall_ip         = var.firewall_ip
-  firewall_policy_id  = module.firewall_policy.firewall_policy_id
-  firewall_sku_tier   = var.firewall_sku_tier  
+  firewall_sku_tier   = var.firewall_sku_tier
   firewall_sku_name   = var.firewall_sku_name
+  firewall_policy_id  = module.fw_policy.resource_id
+
+  firewall_ip_configuration = [
+    {
+      name                 = var.firewall_ipconfig_name
+      subnet_id            = module.hub_vnet.subnets["AzureFirewallSubnet"].resource_id
+      public_ip_address_id = azurerm_public_ip.firewall_pip.id
+    }
+  ]
 }
 
 module "bastion" {
