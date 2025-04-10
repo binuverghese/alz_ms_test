@@ -68,9 +68,51 @@ module "bastion_vnet" {
   location            = var.location
   resource_group_name = azurerm_resource_group.rg.name
   address_space       = var.bastion_vnet_address_space
-  subnets             = var.bastion_vnet_subnets
+
+  # Create AzureBastionSubnet specifically for Bastion
+  subnets = merge(
+    var.bastion_vnet_subnets,
+    {
+      AzureBastionSubnet = {
+        name           = "AzureBastionSubnet"
+        address_prefix = "10.0.1.0/24"  # Adjust subnet prefix as needed
+      }
+    }
+  )
 }
 
+
+module "bastion" {
+  source               = "./modules/bastion"
+  name                 = var.bastion_name
+  location             = var.location
+  resource_group_name  = azurerm_resource_group.rg.name
+
+  # DNS Name (public DNS name for Bastion)
+  dns_name             = "${var.bastion_name}-${azurerm_resource_group.rg.location}.bastion.azure.com"  # Adjust DNS name as per your requirements
+
+  # Subnet ID (Azure Bastion Subnet)
+  subnet_id            = module.bastion_vnet.subnets["AzureBastionSubnet"].id  # Reference the correct subnet for Bastion
+
+  ip_configuration = {
+    name                 = "bastion-ipconfig"
+    subnet_id            = module.bastion_vnet.subnets["AzureBastionSubnet"].id  # Ensure using the AzureBastionSubnet
+    public_ip_address_id = module.bastion_ip.public_ip_id  # Reference the public IP created by the bastion_ip module
+    create_public_ip     = false  # Set this to false as you are providing an external public IP
+  }
+
+  # Optional Bastion Host Configuration
+  copy_paste_enabled   = true
+  file_copy_enabled    = false
+  ip_connect_enabled   = true
+  scale_units          = 2
+  tunneling_enabled    = true
+  kerberos_enabled     = true
+
+  tags = {
+    environment = "development"
+  }
+}
 
 module "firewall" {
   source              = "./modules/firewall"
@@ -90,13 +132,7 @@ module "firewall" {
   ]
 }
 
-module "bastion" {
-  source              = "./modules/bastion"
-  name                = var.bastion_name
-  location            = var.location
-  resource_group_name = azurerm_resource_group.rg.name
-  public_ip_id        = module.bastion_ip.public_ip_id
-}
+
 
 resource "azurerm_virtual_network_peering" "dns_to_hub" {
   name                         = "dns-to-hub"
