@@ -20,6 +20,7 @@ module "route_table" {
   route_table_name = var.route_table_name
   routes = var.routes
   subnet_id           = module.subnet.subnet_id
+  depends_on = [module.rg]
 }
 
 module "nsg" {
@@ -28,6 +29,7 @@ module "nsg" {
   resource_group_name = var.resource_group_name
   nsg_name            = var.nsg_name
   security_rules      = var.security_rules
+  depends_on = [module.rg]
 }
 
 
@@ -39,6 +41,7 @@ module "vnet" {
   address_space       = var.address_space_vnet1
   dns_servers         = var.dns_servers
   enable_vm_protection = var.enable_vm_protection
+  depends_on = [module.rg]
 }
 
 module "subnet" {
