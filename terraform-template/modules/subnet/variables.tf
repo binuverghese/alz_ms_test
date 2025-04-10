@@ -24,3 +24,12 @@ variable "nsg_id" {
   description = "ID of the NSG to associate (optional)"
   default     = null
 }
+variable "resource_group_name" {
+  type        = string
+  description = "The resource group name"
+}
+
+variable "vnet_name" {
+  type        = string
+  description = "The virtual network name"
+}
