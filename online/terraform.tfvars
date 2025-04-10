@@ -48,10 +48,6 @@ firewall_sku_tier       = "Standard"
 firewall_ipconfig_name  = "fw-ipconfig"
 firewall_policy_id      = ""  # Fill this in with actual Firewall Policy ID
 
-# Bastion
-bastion_name             = "bastion-dev"
-bastion_public_ip_name   = "bastion-pip"
-bastion_ip_config_name   = "bastion-ipconfig"
 
 tags = {
   environment = "dev"
