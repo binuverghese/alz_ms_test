@@ -50,6 +50,7 @@ resource "azurerm_application_gateway" "example" {
     http_listener_name         = "listener_name"
     backend_address_pool_name  = "backend_pool"
     backend_http_settings_name = "backend_http_settings"
+    priority                   = 100
   }
 
   tags = {
