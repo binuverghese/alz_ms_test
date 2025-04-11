@@ -1,35 +1,44 @@
 variable "name" {
-  type = string
+  description = "The name of the firewall"
+  type        = string
 }
 
 variable "resource_group_name" {
-  type = string
+  description = "The name of the resource group"
+  type        = string
 }
 
 variable "location" {
-  type = string
+  description = "The Azure region for the firewall"
+  type        = string
 }
 
 variable "firewall_sku_name" {
-  type = string
+  description = "The SKU name of the firewall"
+  type        = string
 }
 
 variable "firewall_sku_tier" {
-  type = string
+  description = "The SKU tier of the firewall"
+  type        = string
 }
 
 variable "firewall_policy_id" {
-  type = string
-}
-
-variable "firewall_ipconfig_name" {
-  type = string
+  description = "The ID of the firewall policy"
+  type        = string
 }
 
 variable "subnet_id" {
-  type = string
+  description = "The ID of the subnet for the firewall"
+  type        = string
 }
 
-variable "public_ip_address_id" {
-  type = string
+variable "public_ip_id" {
+  description = "The ID of the public IP address for the firewall"
+  type        = string
+}
+
+variable "firewall_name" {
+  description = "The name of the firewall"
+  type        = string
 }
