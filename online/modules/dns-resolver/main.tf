@@ -1,4 +1,4 @@
-esource "azurerm_private_dns_resolver" "dns_resolver" {
+resource "azurerm_private_dns_resolver" "dns_resolver" {
   name                = "example-dns-resolver"
   resource_group_name = var.resource_group_name
   location            = var.location
