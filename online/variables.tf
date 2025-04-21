@@ -1,64 +1,86 @@
-variable "subscription_id" {}
+variable "subscription_id" { type = string }
+variable "tenant_id"       { type = string }
+variable "client_id"       { type = string }
 
-variable "location" {}
+variable "location" { type = string }
+variable "resource_group_name" { type = string }
+#variable "route_table_name" { type = string }
+#variable "nsg_name" { type = string }
+variable "vnet_name" { type = string }
+variable "address_space_vnet1" { type = list(string) }
+variable "dns_servers" { type = list(string) }
+variable "enable_vm_protection" { type = bool }
+variable "subnet_name" { type = string }
+variable "subnet_address_prefixes" { type = list(string) }
 
-variable "main_rg_name" {}
-variable "appgw_rg_name" {}
-variable "firewall_policy_rg_name" {}
+# variable "routes" {
+#   type = list(object({
+#     name           = string
+#     address_prefix = string
+#     next_hop_ip    = string
+#   }))
+# }
 
-variable "hub_vnet_name" {}
-variable "hub_vnet_address_space" { type = list(string) }
-
-variable "other_vnet_name" {}
-variable "other_vnet_address_space" { type = list(string) }
-
-variable "dns_resolver_name" {}
-
-variable "firewall_name" {}
-variable "firewall_policy_id" {}
-variable "firewall_ipconfig_name" {}
-variable "firewall_pip_name" {}
-
-variable "appgw_name" {}
-variable "appgw_public_ip_name" {}
-variable "tags" {
-  type        = map(string)
-  description = "Tags to assign to the resources"
-  default     = {
-    environment = "dev"
-    project     = "project_name"
-  }
+ variable "security_rules" {
+  description = "List of security rules for the NSG"
+  type = list(object({
+    name                       = string
+    priority                  = number
+    direction                 = string
+    access                    = string
+    protocol                  = string
+    source_port_range         = string
+    destination_port_range    = string
+    source_address_prefix     = string
+    destination_address_prefix = string
+  }))
+  default = []
 }
-# modules/firewall-policy/variables.tf
-variable "firewall_policy_name" {
-  description = "The name of the firewall policy"
-  type        = string
-}
-# modules/firewall-policy/variables.tf
-variable "name" {}
-variable "resource_group_name" {}
-variable "policy_type" {}
-variable "public_ip_id" {
-  description = "The ID of the public IP to associate with the Application Gateway"
-  type        = string
+variable "create_nsg" {
+  type    = bool
+  default = true  # Set based on your needs
 }
 
-variable "public_ip_name" {
-  description = "The name of the public IP address"
-  type        = string
+variable "create_route_table" {
+  type    = bool
+  default = true  # Set based on your needs
 }
-
-variable "inbound_name" {
-  description = "Name of the inbound endpoint for DNS resolver"
+variable "route_table_name" {
+  description = "The name of the route table"
   type        = string
 }
 
-variable "outbound_name" {
-  description = "Name of the inbound endpoint for DNS resolver"
+variable "nsg_name" {
+  description = "The name of the Network Security Group"
+  type        = string
+}
+variable "rg_main" {
+  description = "The name of the Resource Group for main"
   type        = string
 }
 
-variable "dns_resolver_ip" {
-  description = "The IP address for the DNS resolver"
+
+variable "encryption" {
+  description = "Enable encryption"
+  type        = bool
+}
+variable "flow_timeout_in_minutes" {
+  description = "Flow timeout in minutes"
+  type        = number
+  default     = 4
+}
+
+variable "encryption_enforcement" {
+  type    = string
+  default = "DropUnencrypted"
+}
+
+variable "encryption_type" {
+  type    = string
+  default = "enabled"
+}
+variable "app_gateway_name" {
+  description = "The name of the Application Gateway"
   type        = string
+  default     = "appgw-dev-013"
 }
