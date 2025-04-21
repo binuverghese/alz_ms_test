@@ -1,127 +1,74 @@
-terraform {
-  required_version = ">= 1.9, < 2.0"
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 3.74"
-    }
-    azapi = {
-      source  = "Azure/azapi"
-      version = "~> 1.0"
-    }
-    http = {
-      source  = "hashicorp/http"
-      version = "~> 3.4"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.5"
-    }
-  }
-backend "azurerm" {
-    resource_group_name   = "rg-dev-001"   # The RG where state is stored
-    storage_account_name  = "tfstatedemonew"     # The storage account name
-    container_name        = "tfstate"               # The container name
-    key                   = "terraform.tfstate"     # The name of the state file
-  }
-}
+module "rg_main" {
+  source  = "Azure/avm-res-resources-resourcegroup/azurerm"
+  version = "0.2.1"
 
-provider "azurerm" {
-  features {}
-   #use_msi        = true  #
-   subscription_id = "1e437fdf-bd78-431d-ba95-1498f0e84c10"
-   tenant_id       = "35db3582-96af-4081-a32c-7bbaa2cf3ca9"
-   client_id       = "ec375efa-27ef-4631-834f-05ddec12a417"
-}
-
-provider "azapi" {
-  
-}
-
-# Resource Group
-  resource "azurerm_resource_group" "this" {
-  location = var.location
   name     = var.resource_group_name
+  location = var.location
 }
 
-resource "azurerm_route_table" "this" {
-  location            = var.location
-  name                = var.route_table_name
-  resource_group_name = var.resource_group_name
+module "nsg" {
+  source  = "Azure/avm-res-network-networksecuritygroup/azurerm"
+  version = "~> 0.1"
 
-  dynamic "route" {
-    for_each = var.routes
-    content {
-      name                   = route.value.name
-      address_prefix         = route.value.address_prefix
-      next_hop_type          = route.value.next_hop_ip != null ? "VirtualAppliance" : "Internet"
-      next_hop_in_ip_address = route.value.next_hop_ip
+  name                = var.nsg_name
+  location            = var.location
+  resource_group_name = module.rg_main.name
+  
+  security_rules = {
+    for idx, rule in var.security_rules : rule.name => {
+      name                       = rule.name
+      priority                   = rule.priority
+      direction                  = rule.direction
+      access                     = rule.access
+      protocol                   = rule.protocol
+      source_port_range          = rule.source_port_range
+      destination_port_range     = rule.destination_port_range
+      source_address_prefix      = rule.source_address_prefix
+      destination_address_prefix = rule.destination_address_prefix
     }
   }
+
+  depends_on = [module.rg_main]
 }
 
+# Virtual network without subnets
+module "vnet" {
+  source  = "Azure/avm-res-network-virtualnetwork/azurerm"
+  version = "~> 0.1"
 
-
-
-# Network Security Group (NSG)
-resource "azurerm_network_security_group" "nsg" {
-  location            = var.location
-  name                = var.nsg_name
-  resource_group_name = var.resource_group_name
-
-  security_rule {
-    access                     = "Deny"
-    destination_address_prefix = "*"
-    destination_port_range     = "*"
-    direction                  = "Inbound"
-    name                       = "DenyAllInbound"
-    priority                   = 4096
-    protocol                   = "*"
-    source_address_prefix      = "*"
-    source_port_range          = "*"
-  }
-}
-
-# Virtual Network
-module "vnet1" {
-  source              = "Azure/avm-res-network-virtualnetwork/azurerm"
-  resource_group_name = var.resource_group_name
-  location            = var.location
   name                = var.vnet_name
+  location            = var.location
+  resource_group_name = module.rg_main.name
   address_space       = var.address_space_vnet1
-
-  dns_servers = {
-    dns_servers = toset(var.dns_servers)
-  }
-
+  
   enable_vm_protection = var.enable_vm_protection
-}
-
-# Subnet
-module "subnet1" {
-  source = "Azure/avm-res-network-virtualnetwork/azurerm//modules/subnet"
-
-  virtual_network = {
-    resource_id = module.vnet1.resource_id
+  
+  encryption = {
+    enabled     = var.encryption
+    enforcement = var.encryption_enforcement
+    type        = var.encryption_type
   }
-
-  address_prefixes = var.subnet_address_prefixes
-  name             = var.subnet_name
+  
+  flow_timeout_in_minutes = var.flow_timeout_in_minutes
+  
+  # Empty subnets - we'll create separately
+  subnets = {}
 }
 
-# Ensure the Subnet module outputs `resource_id`
-output "subnet_id" {
-  value = module.subnet1.resource_id
+# Create subnet separately
+resource "azurerm_subnet" "main" {
+  name                 = var.subnet_name
+  resource_group_name  = module.rg_main.name
+  virtual_network_name = module.vnet.name
+  address_prefixes     = var.subnet_address_prefixes
+  
+  #private_link_endpoint_network_policies_enabled = true
 }
 
-# Associate Route Table (UDR) with Subnet
-resource "azurerm_subnet_route_table_association" "subnet_rt" {
-  subnet_id      = module.subnet1.resource_id
-  route_table_id = azurerm_route_table.this.id
-}
-
-# Associate NSG with Subnet
-resource "azurerm_subnet_network_security_group_association" "subnet_nsg" {
-  subnet_id                 = module.subnet1.resource_id
-  network_security_group_id = azurerm_network_security_group.nsg.id
+# Explicit subnet-NSG association
+resource "azurerm_subnet_network_security_group_association" "nsg_association" {
+  subnet_id                 = azurerm_subnet.main.id
+  network_security_group_id = module.nsg.resource.id
+  
+  depends_on = [azurerm_subnet.main, module.nsg]
 }
