@@ -1,29 +1,76 @@
-subscription_id          = "1e437fdf-bd78-431d-ba95-1498f0e84c10"
-location                 = "canadacentral"
-main_rg_name             = "rg-main-dev1"
-appgw_rg_name            = "rg-appgw-dev1"
-fw_policy_rg_name        = "rg-fw-policy-dev"
-hub_vnet_name            = "vnet-hub-dev"
-hub_vnet_address_space   = ["10.0.0.0/16"]
-appgw_public_ip_name     = "pip-appgw-dev1"
-firewall_public_ip_name  = "pip-fw-dev1"
-appgw_name               = "appgw-dev1"
-firewall_name            = "fw-dev"
-firewall_policy_id       = "<firewall-policy-id>"
-firewall_ipconfig_name   = "fw-ipconfig"
-dns_resolver_name        = "dns-resolver-dev"
-spoke_vnet_name          = "vnet-spoke-dev"
-spoke_vnet_rg            = "rg-spoke-dev"
-firewall_pip_name      = "firewallpiptest"
-firewall_policy_name   = "firewallpolicy"
-firewall_policy_rg_name = "firewallrgt"
-name                   = "testing"
-other_vnet_address_space = ["10.0.0.4/16"]
-other_vnet_name        = "testvnet"
-policy_type            = "test"
-public_ip_id           = "192.168.0.1"
-public_ip_name         = "testpubip"
-resource_group_name    = "testingrg"
-inbound_name      = "inbound-dns"
-outbound_name     = "outbound-dns"
-dns_resolver_ip   = "10.0.0.10"
+resource_group_name     = "rg-dev-013"
+vnet_name               = "vnet-dev-canadacentral-013"
+subnet_name             = "snet-dev-canadacentral-013"
+subnet_address_prefixes = ["10.1.0.0/28"]
+enable_vm_protection    = true
+encryption              = false
+route_table_name        = "rt-navigator13"
+nsg_name                = "nsg-con-0013"
+address_space_vnet1     = ["10.1.0.0/24"]
+rg_main                 = "rg-dev-013"
+
+create_nsg        = true
+create_route_table = true
+app_gateway_name = "appgw-dev-013"
+
+subscription_id = "1e437fdf-bd78-431d-ba95-1498f0e84c10"
+client_id = "aeb81ef1-8fe3-4430-8f67-2f6d58a6dac4"
+tenant_id = "72f988bf-86f1-41af-91ab-2d7cd011db47"
+
+location        = "canadacentral" 
+
+dns_servers             = ["10.0.2.4","10.0.2.5"]
+encryption_enforcement = "DropUnencrypted"
+encryption_type        = "EncryptionAtRestWithPlatformKey"
+
+security_rules = [
+  {
+    name                       = "DenyAllInbound"
+    priority                   = 4096
+    direction                  = "Inbound"
+    access                     = "Deny"
+    protocol                   = "*"
+    source_address_prefix      = "*"
+    source_port_range          = "*"
+    destination_address_prefix = "*"
+    destination_port_range     = "*"
+  }
+]
+
+# Next Hop Type for Route Table
+next_hop_type = "VirtualAppliance"
+
+# # Routes
+# routes = [
+#   {
+#     name           = "Internet"
+#     address_prefix = "0.0.0.0/0"
+#     next_hop_ip    = "10.0.0.4"
+#   },
+#   {
+#     name           = "Hub"
+#     address_prefix = "10.0.0.0/24"
+#     next_hop_ip    = "10.0.0.4"
+#   },
+#   {
+#     name           = "Spokes"
+#     address_prefix = "10.1.0.0/16"
+#     next_hop_ip    = "10.0.0.4"
+#   },
+#   {
+#     name           = "On-Prem"
+#     address_prefix = "192.168.0.0/16"
+#     next_hop_ip    = "10.0.0.4"
+#   },
+	
+#     {
+#     name           = "KMS1"
+#     address_prefix = "20.118.99.224/32"
+#     next_hop_ip    = null
+#   },
+# {
+#     name           = "KMS2"
+#     address_prefix = "40.83.235.53/32"
+#     next_hop_ip    = null
+#   }
+# ]
