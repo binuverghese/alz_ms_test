@@ -1,153 +1,432 @@
 terraform {
-  required_version = ">= 1.9, < 2.0"
+  required_version = ">= 1.9.0"
+
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = ">= 3.7.0, < 5.0.0"
+      version = ">= 3.116.0, < 5.0.0"  # Using 3.116.0 to satisfy the strictest version constraint
+    }
+    http = {
+      source  = "hashicorp/http"
+      version = "~> 3.4"
+    }
+    modtm = {
+      source  = "Azure/modtm"
+      version = "~> 0.3"
     }
     random = {
       source  = "hashicorp/random"
-      version = "~> 3.5"
+      version = "~> 3.5.0"  # This satisfies all ~> 3.5 constraints
+    }
+    azapi = {
+      source  = "azure/azapi"  # Lowercase 'azure' instead of 'Azure'
+      version = ">= 1.13.0, < 2.0.0"  # Constrain to 1.x versions only
     }
   }
 }
 
 provider "azurerm" {
-  features {}
-  subscription_id = "1e437fdf-bd78-431d-ba95-1498f0e84c10"
+  subscription_id = var.subscription_id
+  features {
+    resource_group {
+      prevent_deletion_if_contains_resources = false
+    }
+  }
 }
 
-resource "azurerm_resource_group" "rg" {
-  name     = var.resource_group_name
+provider "azapi" {}
+provider "modtm" {}
+provider "random" {}
+provider "http" {}
+
+# Resource Groups - Creating the 4 resource groups
+module "rg_hub" {
+  source  = "Azure/avm-res-resources-resourcegroup/azurerm"
+  version = "0.2.1"
+
+  name     = var.hub_rg_name
   location = var.location
+  tags     = var.tags
 }
 
+module "rg_firewall" {
+  source  = "Azure/avm-res-resources-resourcegroup/azurerm"
+  version = "0.2.1"
+
+  name     = var.firewall_rg_name
+  location = var.location
+  tags     = var.tags
+}
+
+module "rg_dns" {
+  source  = "Azure/avm-res-resources-resourcegroup/azurerm"
+  version = "0.2.1"
+
+  name     = var.dns_rg_name
+  location = var.location
+  tags     = var.tags
+}
+
+module "rg_bastion" {
+  source  = "Azure/avm-res-resources-resourcegroup/azurerm"
+  version = "0.2.1"
+
+  name     = var.bastion_rg_name
+  location = var.location
+  tags     = var.tags
+}
+
+# Hub NSG and Route Table
+module "hub_nsg" {
+  source  = "Azure/avm-res-network-networksecuritygroup/azurerm"
+  version = "0.4.0"
+
+  name                = var.hub_nsg_name
+  location            = var.location
+  resource_group_name = module.rg_hub.name
+
+  security_rules = { for rule in var.security_rules : rule.name => rule }
+
+  tags       = var.tags
+  depends_on = [module.rg_hub]
+}
+
+module "hub_route_table" {
+  source  = "Azure/avm-res-network-routetable/azurerm"
+  version = "0.4.1"
+  
+  name                = var.hub_route_table_name
+  resource_group_name = module.rg_hub.name
+  routes              = { for idx, route in var.routes : route.name => route }
+  location            = var.location
+}
+
+# DNS/Bastion NSG and Route Table
+module "dns_bastion_nsg" {
+  source  = "Azure/avm-res-network-networksecuritygroup/azurerm"
+  version = "0.4.0"
+
+  name                = var.dns_bastion_nsg_name
+  location            = var.location
+  resource_group_name = module.rg_hub.name
+
+  security_rules = { for rule in var.security_rules : rule.name => rule }
+
+  tags       = var.tags
+  depends_on = [module.rg_hub]
+}
+
+module "dns_bastion_route_table" {
+  source  = "Azure/avm-res-network-routetable/azurerm"
+  version = "0.4.1"
+  
+  name                = var.dns_bastion_route_table_name
+  resource_group_name = module.rg_hub.name
+  routes              = { for idx, route in var.routes : route.name => route }
+  location            = var.location
+}
+
+# Hub VNET with Firewall Subnet and Express Gateway
 module "hub_vnet" {
-  source              = "./modules/vnet"
+  source  = "Azure/avm-res-network-virtualnetwork/azurerm"
+  version = "0.5.0"
+
   name                = var.hub_vnet_name
   location            = var.location
-  resource_group_name = azurerm_resource_group.rg.name
+  resource_group_name = module.rg_hub.name
   address_space       = var.hub_vnet_address_space
-  subnets             = var.hub_vnet_subnets
-  #virtual_network_name = module.dns_vnet.name
 
-}
+  # Defining subnets within the hub VNET
+  subnets = {
+    # Main hub subnet
+    "${var.hub_subnet_name}" = {
+      name                                      = var.hub_subnet_name
+      address_prefixes                          = var.hub_subnet_address_prefixes
+      network_security_group_resource_id        = module.hub_nsg.resource.id
+      route_table_resource_id                   = module.hub_route_table.resource.id
+      private_endpoint_network_policies_enabled = true
+    }
 
-module "dns_vnet" {
-  source              = "./modules/vnet"
-  name                = var.dns_vnet_name
-  location            = var.location
-  resource_group_name = azurerm_resource_group.rg.name
-  address_space       = var.dns_vnet_address_space
-  subnets             = var.dns_vnet_subnets
-}
-# DNS Resolver Module
-module "dns_resolver" {
-  source                      = "./modules/dns_resolver"
-  name                        = var.dns_resolver_name
-  location                    = var.location
-  resource_group_name         = azurerm_resource_group.rg.name
-  #virtual_network_resource_id = module.dns_vnet.vnet_id
-  virtual_network_id          = azurerm_virtual_network.vnet1.id 
-  inbound_endpoints = {
-    inbound1 = {
-      name        = "inbound1"
-      subnet_name = azurerm_subnet.inbound.name
+    # Azure Firewall Subnet - must use this specific name
+    "AzureFirewallSubnet" = {
+      name                                      = "AzureFirewallSubnet"
+      address_prefixes                          = var.firewall_subnet_address_prefixes
+      private_endpoint_network_policies_enabled = false
+      # No NSG allowed on Firewall subnet
+    }
+
+    # Express Gateway Subnet - must use this specific name
+    "GatewaySubnet" = {
+      name                                      = "GatewaySubnet"
+      address_prefixes                          = var.express_gateway_subnet_address_prefixes
+      private_endpoint_network_policies_enabled = false
+      # No NSG allowed on Gateway subnet
     }
   }
 
-  outbound_endpoints = {
-    outbound1 = {
-      name        = "outbound1"
-      subnet_name = azurerm_subnet.outbound.name
-    }
-  }
-}
+  tags = var.tags
 
-module "bastion_vnet" {
-  source              = "./modules/vnet"
-  name                = var.bastion_vnet_name
-  location            = var.location
-  resource_group_name = azurerm_resource_group.rg.name
-  address_space       = var.bastion_vnet_address_space
-
-  # Create AzureBastionSubnet specifically for Bastion
-  subnets = merge(
-    var.bastion_vnet_subnets,
-    {
-      AzureBastionSubnet = {
-        name           = "AzureBastionSubnet"
-        address_prefix = "10.0.1.0/24"  # Adjust subnet prefix as needed
-      }
-    }
-  )
-}
-
-
-module "bastion" {
-  source              = "./modules/bastion"
-  name                = var.bastion_host_name
-  location            = var.location
-  resource_group_name = azurerm_resource_group.rg.name
-  public_ip_id        = azurerm_public_ip.bastion.id
-  subnet_id           = module.bastion_vnet.subnet_ids["AzureBastionSubnet"]
-  dns_name            = var.bastion_dns_name
-  scale_units         = 2
-  ip_connect_enabled  = true
-  tunneling_enabled   = true
-  kerberos_enabled    = false
-  copy_paste_enabled  = true
-  file_copy_enabled   = false
-  tags = {
-    environment = "dev"
-    owner       = "networking"
-  }
-}
-
-
-# Create the Public IP for Bastion
-resource "azurerm_public_ip" "bastion_ip" {
-  name                = var.bastion_ip_name
-  location            = var.location
-  resource_group_name = azurerm_resource_group.rg.name
-  allocation_method   = "Static"
-  domain_name_label   = "${var.bastion_name}-${azurerm_resource_group.rg.location}"
-}
-
-module "firewall" {
-  source              = "./modules/firewall"
-  name                = var.firewall_name
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-  firewall_sku_tier   = var.firewall_sku_tier
-  firewall_sku_name   = var.firewall_sku_name
-  firewall_policy_id  = module.fw_policy.resource_id
-
-  firewall_ip_configuration = [
-    {
-      name                 = var.firewall_ipconfig_name
-      subnet_id            = module.hub_vnet.subnets["AzureFirewallSubnet"].resource_id
-      public_ip_address_id = azurerm_public_ip.firewall_pip.id
-    }
+  depends_on = [
+    module.rg_hub,
+    module.hub_nsg,
+    module.hub_route_table
   ]
 }
 
+# DNS/Bastion VNET
+module "dns_bastion_vnet" {
+  source  = "Azure/avm-res-network-virtualnetwork/azurerm"
+  version = "0.5.0"
 
+  name                = var.dns_bastion_vnet_name
+  location            = var.location
+  resource_group_name = module.rg_hub.name
+  address_space       = var.dns_bastion_vnet_address_space
 
-resource "azurerm_virtual_network_peering" "dns_to_hub" {
-  name                         = "dns-to-hub"
-  resource_group_name          = azurerm_resource_group.rg.name
-  virtual_network_name         = module.dns_vnet.name
-  remote_virtual_network_id    = module.hub_vnet.vnet_id
-  allow_virtual_network_access = true
-  allow_forwarded_traffic      = true
+  # Defining subnets for DNS Resolver and Bastion
+  subnets = {
+    # DNS Resolver Inbound Endpoint Subnet
+    "InboundEndpointSubnet" = {
+      name             = "InboundEndpointSubnet"
+      address_prefixes = var.dns_resolver_inbound_subnet_address_prefixes
+      delegation = [
+        {
+          name = "Microsoft.Network.dnsResolvers"
+          service_delegation = {
+            name    = "Microsoft.Network/dnsResolvers"
+            actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
+          }
+        }
+      ]
+    }
+
+    # DNS Resolver Outbound Endpoint Subnet
+    "OutboundEndpointSubnet" = {
+      name             = "OutboundEndpointSubnet"
+      address_prefixes = var.dns_resolver_outbound_subnet_address_prefixes
+      delegation = [
+        {
+          name = "Microsoft.Network.dnsResolvers"
+          service_delegation = {
+            name    = "Microsoft.Network/dnsResolvers"
+            actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
+          }
+        }
+      ]
+    }
+
+    # Azure Bastion Subnet - must use this specific name
+    "AzureBastionSubnet" = {
+      name                                      = "AzureBastionSubnet"
+      address_prefixes                          = var.bastion_subnet_address_prefixes
+      private_endpoint_network_policies_enabled = false
+      # No NSG allowed on Bastion subnet
+    }
+  }
+
+  tags = var.tags
+
+  depends_on = [
+    module.rg_hub,
+    module.dns_bastion_nsg,
+    module.dns_bastion_route_table
+  ]
 }
 
-resource "azurerm_virtual_network_peering" "hub_to_dns" {
-  name                         = "hub-to-dns"
-  resource_group_name          = azurerm_resource_group.rg.name
-  virtual_network_name         = module.hub_vnet.name
-  remote_virtual_network_id    = module.dns_vnet.vnet_id
+# VNET Peering (Hub to DNS/Bastion)
+module "hub_to_dns_bastion_peering" {
+  source  = "Azure/avm-res-network-virtualnetwork/azurerm//modules/peering"
+  version = "0.5.0"
+
+  virtual_network = {
+    resource_id = module.hub_vnet.resource.id
+  }
+  remote_virtual_network = {
+    resource_id = module.dns_bastion_vnet.resource.id
+  }
+  name                         = var.hub_to_dns_peering_name
   allow_virtual_network_access = true
-  allow_forwarded_traffic      = false
+  allow_forwarded_traffic      = true
+  allow_gateway_transit        = true
+  use_remote_gateways          = false
+  
+  depends_on = [
+    module.hub_vnet,
+    module.dns_bastion_vnet
+  ]
+}
+
+# VNET Peering (DNS/Bastion to Hub)
+module "dns_bastion_to_hub_peering" {
+  source  = "Azure/avm-res-network-virtualnetwork/azurerm//modules/peering"
+  version = "0.5.0"
+
+  virtual_network = {
+    resource_id = module.dns_bastion_vnet.resource.id
+  }
+  remote_virtual_network = {
+    resource_id = module.hub_vnet.resource.id
+  }
+  name                         = var.dns_to_hub_peering_name
+  allow_virtual_network_access = true
+  allow_forwarded_traffic      = true
+  allow_gateway_transit        = false
+  use_remote_gateways          = true
+  
+  depends_on = [
+    module.hub_vnet,
+    module.dns_bastion_vnet,
+    module.hub_to_dns_bastion_peering
+  ]
+}
+
+# Firewall Public IP
+module "firewall_pip" {
+  source  = "Azure/avm-res-network-publicipaddress/azurerm"
+  version = "0.1.2"
+
+  name                = "${var.firewall_name}-pip"
+  location            = var.location
+  resource_group_name = module.rg_hub.name  # Changed from module.rg_firewall.name
+  allocation_method   = "Static"
+  sku                 = "Standard"
+  zones               = [1, 2, 3]
+
+  tags = var.tags
+}
+
+# Firewall Policy
+module "firewall_policy" {
+  source  = "Azure/avm-res-network-firewallpolicy/azurerm"
+  version = "0.3.3"
+
+  name                = var.firewall_policy_name
+  location            = var.location
+  resource_group_name = module.rg_hub.name  # Changed from module.rg_firewall.name
+  firewall_policy_sku = var.firewall_policy_sku_tier
+
+  firewall_policy_dns = {
+    servers        = var.dns_servers
+    proxy_enabled  = true
+  }
+
+  tags = var.tags
+
+  depends_on = [module.rg_hub]  # Changed from module.rg_firewall
+}
+
+# Azure Firewall
+module "firewall" {
+  source  = "Azure/avm-res-network-azurefirewall/azurerm"
+  version = "0.3.0"
+
+  name                = var.firewall_name
+  resource_group_name = module.rg_hub.name  # Changed from module.rg_firewall.name
+  location            = var.location
+
+  firewall_sku_name = "AZFW_VNet"
+  firewall_sku_tier = var.firewall_sku_tier
+
+  firewall_policy_id = module.firewall_policy.resource.id
+
+  # IP Configuration
+  firewall_ip_configuration = [{
+    name                 = "fw-ipconfig"
+    public_ip_address_id = module.firewall_pip.public_ip_id
+    subnet_id            = "${module.hub_vnet.resource.id}/subnets/AzureFirewallSubnet"
+  }]
+
+  tags = var.tags
+
+  depends_on = [
+    module.rg_hub,  # Changed from module.rg_firewall
+    module.hub_vnet,
+    module.firewall_policy,
+    module.firewall_pip
+  ]
+}
+
+# DNS Resolver
+module "private_resolver" {
+  source  = "Azure/avm-res-network-dnsresolver/azurerm"
+  version = "0.7.2"
+  
+  name                        = var.dns_resolver_name
+  resource_group_name         = module.rg_dns.name
+  location                    = var.location
+  virtual_network_resource_id = module.dns_bastion_vnet.resource.id
+  
+  # Inbound endpoint in the DNS/Bastion VNET
+  inbound_endpoints = {
+    "inbound1" = {
+      name        = "inbound1"
+      subnet_id   = module.dns_bastion_vnet.subnets["InboundEndpointSubnet"].resource_id
+      subnet_name = "InboundEndpointSubnet"
+    }
+  }
+  
+  # Outbound endpoint in the DNS/Bastion VNET
+  outbound_endpoints = {
+    "outbound1" = {
+      name        = "outbound1"
+      subnet_id   = module.dns_bastion_vnet.subnets["OutboundEndpointSubnet"].resource_id
+      subnet_name = "OutboundEndpointSubnet"
+      # No forwarding ruleset needed initially
+    }
+  }
+  
+  enable_telemetry = var.enable_telemetry
+  
+  depends_on = [
+    module.rg_dns,
+    module.dns_bastion_vnet
+  ]
+}
+
+# Bastion Public IP
+module "bastion_pip" {
+  source  = "Azure/avm-res-network-publicipaddress/azurerm"
+  version = "0.1.2"
+  
+  name                = "${var.bastion_name}-pip"
+  location            = var.location
+  resource_group_name = module.rg_bastion.name
+  allocation_method   = "Static"
+  sku                 = "Standard"
+  zones               = [1, 2, 3]
+  
+  tags = var.tags
+}
+
+# Azure Bastion - Using AVM Module version 0.6.0 which is compatible with current azapi constraints
+module "bastion" {
+  source  = "Azure/avm-res-network-bastionhost/azurerm"
+  version = "0.6.0"
+  
+  name                = var.bastion_name
+  resource_group_name = module.rg_bastion.name
+  location            = var.location
+  sku                 = var.bastion_sku
+  
+  ip_configuration = {
+    name                 = "bastion-ipconfig"
+    subnet_id            = module.dns_bastion_vnet.subnets["AzureBastionSubnet"].resource_id
+    public_ip_address_id = module.bastion_pip.public_ip_id
+    create_public_ip     = false
+  }
+  
+  # Additional Bastion features
+  copy_paste_enabled     = true
+  file_copy_enabled      = true
+  ip_connect_enabled     = true
+  shareable_link_enabled = true
+  tunneling_enabled      = true
+  
+  tags = var.tags
+  
+  depends_on = [
+    module.rg_bastion,
+    module.dns_bastion_vnet,
+    module.bastion_pip
+  ]
 }
