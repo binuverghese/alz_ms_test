@@ -36,25 +36,25 @@ stages:
                 # CONTAINER_NAME="tfstate"
                 # LOCATION="Canada Central"
 
-                echo "Ensuring Resource Group exists..."
-                # Check if the resource group exists
-                rg_exists=$(az group show --name $RG_NAME --query "name" -o tsv)
-                if [ -z "$rg_exists" ]; then
-                  echo "Resource Group does not exist. Creating resource group..."
-                  az group create --name $RG_NAME --location $LOCATION
-                else
-                  echo "Resource Group $RG_NAME already exists. Importing into Terraform state..."
-                  terraform import azurerm_resource_group.rg_appgw_dev /subscriptions/$(az account show --query id -o tsv)/resourceGroups/$RG_NAME
-                fi
+                # echo "Ensuring Resource Group exists..."
+                # # Check if the resource group exists
+                # rg_exists=$(az group show --name $RG_NAME --query "name" -o tsv)
+                # if [ -z "$rg_exists" ]; then
+                #   echo "Resource Group does not exist. Creating resource group..."
+                #   az group create --name $RG_NAME --location $LOCATION
+                # else
+                #   echo "Resource Group $RG_NAME already exists. Importing into Terraform state..."
+                #   terraform import azurerm_resource_group.rg_appgw_dev /subscriptions/$(az account show --query id -o tsv)/resourceGroups/$RG_NAME
+                # fi
 
-                echo "Ensuring Storage Account exists..."
-                az storage account show --name $SA_NAME --resource-group $RG_NAME || \
-                  az storage account create --name $SA_NAME --resource-group $RG_NAME --location $LOCATION --sku Standard_LRS
+                # echo "Ensuring Storage Account exists..."
+                # az storage account show --name $SA_NAME --resource-group $RG_NAME || \
+                #   az storage account create --name $SA_NAME --resource-group $RG_NAME --location $LOCATION --sku Standard_LRS
 
-                echo "Ensuring Blob Container exists..."
-                KEY=$(az storage account keys list --account-name $SA_NAME --resource-group $RG_NAME --query '[0].value' -o tsv)
-                az storage container show --name $CONTAINER_NAME --account-name $SA_NAME --account-key $KEY || \
-                  az storage container create --name $CONTAINER_NAME --account-name $SA_NAME --account-key $KEY
+                # echo "Ensuring Blob Container exists..."
+                # KEY=$(az storage account keys list --account-name $SA_NAME --resource-group $RG_NAME --query '[0].value' -o tsv)
+                # az storage container show --name $CONTAINER_NAME --account-name $SA_NAME --account-key $KEY || \
+                #   az storage container create --name $CONTAINER_NAME --account-name $SA_NAME --account-key $KEY
 
   - stage: Dev
     displayName: "Terraform Deployment - Dev"
