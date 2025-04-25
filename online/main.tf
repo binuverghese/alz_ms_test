@@ -8,7 +8,8 @@ locals {
   appgw_resource_group    = "${var.bu}-${var.region_short}-${var.archetype}-${var.wl}-${var.env}-appgw-rg"
   # Using full naming convention for Application Gateway (you'll need to modify the module validation manually)
   appgw_name              = "${var.bu}-${var.region_short}-${var.archetype}-${var.wl}-${var.env}-appgateway-agw"
-  appgw_pip_name          = "${var.bu}-${var.region_short}-${var.archetype}-${var.wl}-${var.env}-appgw-pip"
+  #appgw_pip_name          = "${var.bu}-${var.region_short}-${var.archetype}-${var.wl}-${var.env}-appgw-pip"
+  appgw_pip_name          = "${var.bu}-${var.region_short}-${var.archetype}-appgw-pip"
   nsg_name                = "${var.bu}-${var.region_short}-${var.archetype}-${var.wl}-${var.env}-workload-nsg"
   subnet_name             = "${var.bu}-${var.region_short}-${var.archetype}-${var.wl}-${var.env}-workload-snet"
   appgw_subnet_name       = "${var.bu}-${var.region_short}-${var.archetype}-${var.wl}-${var.env}-appgw-snet"
