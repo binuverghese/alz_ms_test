@@ -112,7 +112,7 @@ module "rg_appgw" {
   location = var.location
 }
 
-/*
+
 # Create public IP for Application Gateway using AVM module
 module "appgw_pip" {
   source  = "Azure/avm-res-network-publicipaddress/azurerm"
@@ -245,7 +245,7 @@ module "application_gateway" {
   ]
 }
 
-*/
+
 # Create the reverse peering using official AVM peering module
 module "vnet_peering_reverse" {
   source  = "Azure/avm-res-network-virtualnetwork/azurerm//modules/peering"
