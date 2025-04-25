@@ -31,10 +31,10 @@ stages:
               scriptType: bash
               scriptLocation: inlineScript
               inlineScript: |
-                RG_NAME="rg-dev-001"
-                SA_NAME="tfstatedemonew"
-                CONTAINER_NAME="tfstate"
-                LOCATION="Canada Central"
+                # RG_NAME="rg-dev-001"
+                # SA_NAME="tfstatedemonew"
+                # CONTAINER_NAME="tfstate"
+                # LOCATION="Canada Central"
 
                 echo "Ensuring Resource Group exists..."
                 # Check if the resource group exists
