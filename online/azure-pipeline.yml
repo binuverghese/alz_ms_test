@@ -27,7 +27,7 @@ stages:
         steps:
           - task: AzureCLI@2
             inputs:
-              azureSubscription: "Terraform-OIDC-Connection"
+              azureSubscription: "Terraform-OIDC-Connection-2"
               scriptType: bash
               scriptLocation: inlineScript
               inlineScript: |
