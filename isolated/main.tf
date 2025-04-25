@@ -1,127 +1,169 @@
-terraform {
-  required_version = ">= 1.9, < 2.0"
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 3.74"
-    }
-    azapi = {
-      source  = "Azure/azapi"
-      version = "~> 1.0"
-    }
-    http = {
-      source  = "hashicorp/http"
-      version = "~> 3.4"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.5"
-    }
-  }
-backend "azurerm" {
-    resource_group_name   = "rg-dev-001"   # The RG where state is stored
-    storage_account_name  = "tfstatedemonew"     # The storage account name
-    container_name        = "tfstate"               # The container name
-    key                   = "terraform.tfstate"     # The name of the state file
-  }
-}
-
-provider "azurerm" {
-  features {}
-   #use_msi        = true  #
-   subscription_id = "1e437fdf-bd78-431d-ba95-1498f0e84c10"
-   tenant_id       = "35db3582-96af-4081-a32c-7bbaa2cf3ca9"
-   client_id       = "ec375efa-27ef-4631-834f-05ddec12a417"
-}
-
-provider "azapi" {
+locals {
+  # Base naming pattern: BU-Region-Archetype-WL-Env-WLDesc
+  #name_prefix = "${var.business_unit}-${var.region_short}-${var.archetype}-${var.workload}-${var.environment}-${var.workload_description}"
+  name_prefix = "${var.business_unit}-${var.region_short}-${var.archetype}-${var.workload}-${var.environment}"
+  # Resource-specific names
+  vnet_name = "${local.name_prefix}-vnet"
+  subnet_name = "${local.name_prefix}-snet"
+  nsg_name = "${local.name_prefix}-nsg"
+  rg_name = "${local.name_prefix}-vnet-rg"
+  rt_name = "${local.name_prefix}-rt"
+  dns_zone_rg_name = "${local.name_prefix}-dns-rg"
   
+  # Derived names
+  peering_name = "peer-${local.vnet_name}-to-remote-vnet"
+  
+#   # Common private DNS zones for Azure services
+#   private_dns_zones = {
+#     "blob"      = "privatelink.blob.core.windows.net"
+#     "file"      = "privatelink.file.core.windows.net"
+#     "queue"     = "privatelink.queue.core.windows.net"
+#     "table"     = "privatelink.table.core.windows.net"
+#     "sql"       = "privatelink.database.windows.net"
+#     "keyvault"  = "privatelink.vaultcore.azure.net"
+#     "websites"  = "privatelink.azurewebsites.net"
+#     "acr"       = "privatelink.azurecr.io"
+#     "cosmos-sql"= "privatelink.documents.azure.com"
+#   }
 }
 
-# Resource Group
-  resource "azurerm_resource_group" "this" {
+module "rg_main" {
+  source  = "Azure/avm-res-resources-resourcegroup/azurerm"
+  version = "0.2.1"
+
+  name     = local.rg_name
   location = var.location
-  name     = var.resource_group_name
 }
 
-resource "azurerm_route_table" "this" {
-  location            = var.location
-  name                = var.route_table_name
-  resource_group_name = var.resource_group_name
+module "nsg" {
+  source  = "Azure/avm-res-network-networksecuritygroup/azurerm"
+  version = "~> 0.1"
 
-  dynamic "route" {
-    for_each = var.routes
-    content {
-      name                   = route.value.name
-      address_prefix         = route.value.address_prefix
-      next_hop_type          = route.value.next_hop_ip != null ? "VirtualAppliance" : "Internet"
-      next_hop_in_ip_address = route.value.next_hop_ip
+  name                = local.nsg_name
+  location            = var.location
+  resource_group_name = module.rg_main.name
+  
+  security_rules = {
+    for idx, rule in var.security_rules : rule.name => {
+      name                       = rule.name
+      priority                   = rule.priority
+      direction                  = rule.direction
+      access                     = rule.access
+      protocol                   = rule.protocol
+      source_port_range          = rule.source_port_range
+      destination_port_range     = rule.destination_port_range
+      source_address_prefix      = rule.source_address_prefix
+      destination_address_prefix = rule.destination_address_prefix
     }
   }
+
+  depends_on = [module.rg_main]
 }
 
+# Virtual network with integrated subnet and NSG association
+module "vnet" {
+  source  = "Azure/avm-res-network-virtualnetwork/azurerm"
+  version = "~> 0.1"
 
-
-
-# Network Security Group (NSG)
-resource "azurerm_network_security_group" "nsg" {
+  name                = local.vnet_name
   location            = var.location
-  name                = var.nsg_name
-  resource_group_name = var.resource_group_name
-
-  security_rule {
-    access                     = "Deny"
-    destination_address_prefix = "*"
-    destination_port_range     = "*"
-    direction                  = "Inbound"
-    name                       = "DenyAllInbound"
-    priority                   = 4096
-    protocol                   = "*"
-    source_address_prefix      = "*"
-    source_port_range          = "*"
-  }
-}
-
-# Virtual Network
-module "vnet1" {
-  source              = "Azure/avm-res-network-virtualnetwork/azurerm"
-  resource_group_name = var.resource_group_name
-  location            = var.location
-  name                = var.vnet_name
+  resource_group_name = module.rg_main.name
   address_space       = var.address_space_vnet1
-
+  
+  # Configure DNS servers properly using the required format
   dns_servers = {
-    dns_servers = toset(var.dns_servers)
+    dns_servers = var.dns_servers
   }
-
+  
   enable_vm_protection = var.enable_vm_protection
-}
-
-# Subnet
-module "subnet1" {
-  source = "Azure/avm-res-network-virtualnetwork/azurerm//modules/subnet"
-
-  virtual_network = {
-    resource_id = module.vnet1.resource_id
+  
+  encryption = {
+    enabled     = var.encryption
+    enforcement = var.encryption_enforcement
+    type        = var.encryption_type
+  }
+  
+  flow_timeout_in_minutes = var.flow_timeout_in_minutes
+  
+  # Define subnets directly in the VNet module with NSG association
+  subnets = {
+    "${local.subnet_name}" = {
+      name                                     = local.subnet_name
+      address_prefixes                         = var.subnet_address_prefixes
+      network_security_group = {
+        id = module.nsg.resource.id
+      }
+      private_endpoint_network_policies_enabled = true
+    }
   }
 
-  address_prefixes = var.subnet_address_prefixes
-  name             = var.subnet_name
+  # Add peering configuration only if remote_virtual_network_id is provided
+  # peerings = var.remote_virtual_network_id != null ? {
+  #   peer-to-remote-vnet = {
+  #     name                              = local.peering_name
+  #     remote_virtual_network_resource_id = var.remote_virtual_network_id
+  #     allow_virtual_network_access      = true
+  #     allow_forwarded_traffic           = true
+  #     allow_gateway_transit             = false
+  #     use_remote_gateways               = false
+  #   }
+  # } : {}
+  
+  depends_on = [module.rg_main, module.nsg]
 }
 
-# Ensure the Subnet module outputs `resource_id`
-output "subnet_id" {
-  value = module.subnet1.resource_id
+# Resource Group for Private DNS Zones
+module "rg_dns" {
+  source  = "Azure/avm-res-resources-resourcegroup/azurerm"
+  version = "0.2.1"
+
+  name     = local.dns_zone_rg_name
+  location = var.location
 }
 
-# Associate Route Table (UDR) with Subnet
-resource "azurerm_subnet_route_table_association" "subnet_rt" {
-  subnet_id      = module.subnet1.resource_id
-  route_table_id = azurerm_route_table.this.id
+# Route Table
+module "route_table" {
+  source  = "Azure/avm-res-network-routetable/azurerm"
+  version = "0.4.1"
+
+  name                = local.rt_name
+  location            = var.location
+  resource_group_name = module.rg_main.name
+  
+  routes = {
+    for idx, route in var.routes : route.name => {
+      name                   = route.name
+      address_prefix         = route.address_prefix
+      next_hop_type          = route.next_hop_type
+      next_hop_in_ip_address = route.next_hop_ip
+    }
+  }
+  
+  # Associate route table with subnet
+  subnet_resource_ids = {
+    subnet1 = "${module.vnet.resource.id}/subnets/${local.subnet_name}"
+  }
+
+  depends_on = [module.rg_main, module.vnet]
 }
 
-# Associate NSG with Subnet
-resource "azurerm_subnet_network_security_group_association" "subnet_nsg" {
-  subnet_id                 = module.subnet1.resource_id
-  network_security_group_id = azurerm_network_security_group.nsg.id
-}
+# # Private DNS Zones
+# module "private_dns_zones" {
+#   source  = "Azure/avm-res-network-privatednszone/azurerm"
+#   version = "0.1.1"
+  
+#   for_each = local.private_dns_zones
+
+#   domain_name         = each.value
+#   resource_group_name = module.rg_dns.name
+  
+#   virtual_network_links = {
+#     "link-to-${local.vnet_name}" = {
+#       virtual_network_resource_id    = module.vnet.resource.id
+#       registration_enabled           = false
+#       virtual_network_link_name      = "link-to-${local.vnet_name}"
+#     }
+#   }
+
+#   depends_on = [module.rg_dns, module.vnet]
+# }
