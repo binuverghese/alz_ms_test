@@ -14,7 +14,7 @@ parameters:
       - "HUB_FIREWALL_BASTION"
       - "cloudexclusive"
       - "connected"
-      - "online"
+  
 
 
   - name: environment
