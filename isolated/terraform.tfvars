@@ -1,9 +1,3 @@
-# Authentication details
-subscription_id         = "1e437fdf-bd78-431d-ba95-1498f0e84c10"
-client_id               = "aeb81ef1-8fe3-4430-8f67-2f6d58a6dac4"
-tenant_id               = "72f988bf-86f1-41af-91ab-2d7cd011db47"
-
-
 # Naming components - these combine to create all resource names
 business_unit        = "ns"
 region_short         = "cc"
