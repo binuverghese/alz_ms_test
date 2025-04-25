@@ -1,8 +1,23 @@
+locals {
+  # Base naming pattern: BU-Region-Archetype-WL-Env-WLDesc
+  #name_prefix = "${var.business_unit}-${var.region_short}-${var.archetype}-${var.workload}-${var.environment}-${var.workload_description}"
+  name_prefix = "${var.business_unit}-${var.region_short}-${var.archetype}-${var.workload}-${var.environment}"
+  # Resource-specific names
+  vnet_name = "${local.name_prefix}-vnet"
+  subnet_name = "${local.name_prefix}-snet"
+  nsg_name = "${local.name_prefix}-nsg"
+  rg_name = "${local.name_prefix}-vnet-rg"
+  rt_name = "${local.name_prefix}-rt"
+  
+  # Derived names
+  peering_name = "peer-${local.vnet_name}-to-remote-vnet"
+}
+
 module "rg_main" {
   source  = "Azure/avm-res-resources-resourcegroup/azurerm"
   version = "0.2.1"
 
-  name     = var.resource_group_name
+  name     = local.rg_name
   location = var.location
 }
 
@@ -10,7 +25,7 @@ module "nsg" {
   source  = "Azure/avm-res-network-networksecuritygroup/azurerm"
   version = "~> 0.1"
 
-  name                = var.nsg_name
+  name                = local.nsg_name
   location            = var.location
   resource_group_name = module.rg_main.name
   
@@ -31,15 +46,20 @@ module "nsg" {
   depends_on = [module.rg_main]
 }
 
-# Virtual network without subnets
+# Virtual network with integrated subnet and NSG association
 module "vnet" {
   source  = "Azure/avm-res-network-virtualnetwork/azurerm"
   version = "~> 0.1"
 
-  name                = var.vnet_name
+  name                = local.vnet_name
   location            = var.location
   resource_group_name = module.rg_main.name
   address_space       = var.address_space_vnet1
+  
+  # Configure DNS servers properly using the required format
+  dns_servers = {
+    dns_servers = var.dns_servers
+  }
   
   enable_vm_protection = var.enable_vm_protection
   
@@ -51,24 +71,29 @@ module "vnet" {
   
   flow_timeout_in_minutes = var.flow_timeout_in_minutes
   
-  # Empty subnets - we'll create separately
-  subnets = {}
-}
+  # Define subnets directly in the VNet module with NSG association
+  subnets = {
+    "${local.subnet_name}" = {
+      name                                     = local.subnet_name
+      address_prefixes                         = var.subnet_address_prefixes
+      network_security_group = {
+        id = module.nsg.resource.id
+      }
+      private_endpoint_network_policies_enabled = true
+    }
+  }
 
-# Create subnet separately
-resource "azurerm_subnet" "main" {
-  name                 = var.subnet_name
-  resource_group_name  = module.rg_main.name
-  virtual_network_name = module.vnet.name
-  address_prefixes     = var.subnet_address_prefixes
+  # Add peering configuration only if remote_virtual_network_id is provided
+  # peerings = var.remote_virtual_network_id != null ? {
+  #   peer-to-remote-vnet = {
+  #     name                              = local.peering_name
+  #     remote_virtual_network_resource_id = var.remote_virtual_network_id
+  #     allow_virtual_network_access      = true
+  #     allow_forwarded_traffic           = true
+  #     allow_gateway_transit             = false
+  #     use_remote_gateways               = false
+  #   }
+  # } : {}
   
-  #private_link_endpoint_network_policies_enabled = true
-}
-
-# Explicit subnet-NSG association
-resource "azurerm_subnet_network_security_group_association" "nsg_association" {
-  subnet_id                 = azurerm_subnet.main.id
-  network_security_group_id = module.nsg.resource.id
-  
-  depends_on = [azurerm_subnet.main, module.nsg]
+  depends_on = [module.rg_main, module.nsg]
 }
