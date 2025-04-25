@@ -1,8 +1,35 @@
+# Local variables block for resource naming with concatenation
+locals {
+  # Resource names using naming convention concatenation
+  #vnet_name               = "${var.bu}-${var.region_short}-${var.archetype}-${var.wl}-${var.env}-${var.wl_desc}-vnet"
+  #resource_group_name     = "${var.bu}-${var.region_short}-${var.archetype}-${var.wl}-${var.env}-${var.wl_desc}-vnet-rg"
+  vnet_name               = "${var.bu}-${var.region_short}-${var.archetype}-${var.wl}-${var.env}-vnet"
+  resource_group_name     = "${var.bu}-${var.region_short}-${var.archetype}-${var.wl}-${var.env}-vnet-rg"
+  appgw_resource_group    = "${var.bu}-${var.region_short}-${var.archetype}-${var.wl}-${var.env}-appgw-rg"
+  # Using full naming convention for Application Gateway (you'll need to modify the module validation manually)
+  appgw_name              = "${var.bu}-${var.region_short}-${var.archetype}-${var.wl}-${var.env}-appgateway-agw"
+  appgw_pip_name          = "${var.bu}-${var.region_short}-${var.archetype}-${var.wl}-${var.env}-appgw-pip"
+  nsg_name                = "${var.bu}-${var.region_short}-${var.archetype}-${var.wl}-${var.env}-workload-nsg"
+  subnet_name             = "${var.bu}-${var.region_short}-${var.archetype}-${var.wl}-${var.env}-workload-snet"
+  appgw_subnet_name       = "${var.bu}-${var.region_short}-${var.archetype}-${var.wl}-${var.env}-appgw-snet"
+  peering_name            = "${local.vnet_name}-to-remote-vnet"
+  reverse_peering_name    = "remote-vnet-to-${local.vnet_name}"
+}
+
+# Provider configuration for remote subscription
+provider "azurerm" {
+  alias           = "remote_subscription"
+  subscription_id = var.remote_subscription_id
+  tenant_id       = var.remote_tenant_id   # Use the explicit remote_tenant_id value
+  client_id       = var.client_id
+  
+}
+
 module "rg_main" {
   source  = "Azure/avm-res-resources-resourcegroup/azurerm"
   version = "0.2.1"
 
-  name     = var.resource_group_name
+  name     = local.resource_group_name
   location = var.location
 }
 
@@ -10,7 +37,7 @@ module "nsg" {
   source  = "Azure/avm-res-network-networksecuritygroup/azurerm"
   version = "~> 0.1"
 
-  name                = var.nsg_name
+  name                = local.nsg_name
   location            = var.location
   resource_group_name = module.rg_main.name
   
@@ -31,12 +58,12 @@ module "nsg" {
   depends_on = [module.rg_main]
 }
 
-# Virtual network without subnets
+# Virtual network with subnets and NSG associations using AVM approach
 module "vnet" {
   source  = "Azure/avm-res-network-virtualnetwork/azurerm"
   version = "~> 0.1"
 
-  name                = var.vnet_name
+  name                = local.vnet_name
   location            = var.location
   resource_group_name = module.rg_main.name
   address_space       = var.address_space_vnet1
@@ -51,26 +78,29 @@ module "vnet" {
   
   flow_timeout_in_minutes = var.flow_timeout_in_minutes
   
-  # Empty subnets - we'll create separately
-  subnets = {}
-}
-
-# Create subnet separately
-resource "azurerm_subnet" "main" {
-  name                 = var.subnet_name
-  resource_group_name  = module.rg_main.name
-  virtual_network_name = module.vnet.name
-  address_prefixes     = var.subnet_address_prefixes
+  # Define subnets directly in the VNET module (AVM recommended approach)
+  subnets = {
+    appgw = {
+      name             = local.appgw_subnet_name
+      address_prefixes = ["10.100.0.64/27"]
+      # Added NSG to the App Gateway subnet as requested
+      network_security_group = {
+        id = module.nsg.resource.id
+      }
+    }
+  }
   
-  #private_link_endpoint_network_policies_enabled = true
-}
-
-# Explicit subnet-NSG association
-resource "azurerm_subnet_network_security_group_association" "nsg_association" {
-  subnet_id                 = azurerm_subnet.main.id
-  network_security_group_id = module.nsg.resource.id
-  
-  depends_on = [azurerm_subnet.main, module.nsg]
+  # Add peering configuration using the native AVM VNET module peering feature
+  peerings = var.remote_virtual_network_id != null ? {
+    peer-to-remote-vnet = {
+      name                              = local.peering_name
+      remote_virtual_network_resource_id = var.remote_virtual_network_id
+      allow_virtual_network_access      = true
+      allow_forwarded_traffic           = false  # Disabled receiving forwarded traffic
+      allow_gateway_transit             = false
+      use_remote_gateways               = false
+    }
+  } : {}
 }
 
 # Create resource group for Application Gateway
@@ -78,26 +108,22 @@ module "rg_appgw" {
   source  = "Azure/avm-res-resources-resourcegroup/azurerm"
   version = "0.2.1"
 
-  name     = "${var.resource_group_name}-appgw"
+  name     = local.appgw_resource_group
   location = var.location
 }
 
-# Create public IP for Application Gateway
-resource "azurerm_public_ip" "appgw_pip" {
-  name                = "pip-appgw"
-  resource_group_name = module.rg_appgw.name
+/*
+# Create public IP for Application Gateway using AVM module
+module "appgw_pip" {
+  source  = "Azure/avm-res-network-publicipaddress/azurerm"
+  version = "0.1.0"
+
+  name                = local.appgw_pip_name
+  resource_group_name = module.rg_main.name
   location            = var.location
   allocation_method   = "Static"
   sku                 = "Standard"
   zones               = ["1", "2", "3"]  # Making it zone-redundant to match the Application Gateway zones
-}
-
-# Create subnet for Application Gateway
-resource "azurerm_subnet" "appgw_subnet" {
-  name                 = "snet-appgw"
-  resource_group_name  = module.rg_main.name
-  virtual_network_name = module.vnet.name
-  address_prefixes     = ["10.1.0.16/28"] # Using a subnet within the VNET's 10.1.0.0/24 range
 }
 
 module "application_gateway" {
@@ -108,38 +134,46 @@ module "application_gateway" {
   resource_group_name = module.rg_appgw.name
   location            = var.location
   
-  # Use existing public IP that you already created
-  public_ip_resource_id = azurerm_public_ip.appgw_pip.id
+  # Do not configure a public IP for the Application Gateway
   create_public_ip      = false
 
   # Provide Application gateway name 
-  name = var.app_gateway_name
+  name = local.appgw_name
 
-  # Frontend IP configuration names
-  frontend_ip_configuration_public_name = "public-ip-config"
-
+  # Only configure the private frontend IP
   frontend_ip_configuration_private = {
     name                          = "private-ip-config"
     private_ip_address_allocation = "Static"
-    private_ip_address            = "10.1.0.20" # Using an IP from the AppGW subnet CIDR range
-    subnet_id                     = azurerm_subnet.appgw_subnet.id
+    private_ip_address            = "10.100.0.68" # IP from the AppGW subnet CIDR range
+    subnet_id                     = module.vnet.subnets.appgw.resource_id
   }
 
   # Gateway IP configuration
   gateway_ip_configuration = {
     name      = "appGatewayIpConfig"
-    subnet_id = azurerm_subnet.appgw_subnet.id
+    subnet_id = module.vnet.subnets.appgw.resource_id
   }
 
   tags = {
     environment = "development"
   }
 
-  # WAF: Using Standard_v2 for better performance and autoscaling capabilities
+  # WAF: Using WAF_v2 for web application firewall capabilities
   sku = {
-    name     = "Standard_v2"
-    tier     = "Standard_v2"
+    name     = "WAF_v2"
+    tier     = "WAF_v2"
     capacity = 2
+  }
+  
+  # WAF configuration
+  waf_configuration = {
+    enabled                  = true
+    firewall_mode            = "Prevention" # Can be Detection or Prevention
+    rule_set_type            = "OWASP"
+    rule_set_version         = "3.2"
+    file_upload_limit_mb     = 100
+    request_body_check       = true
+    max_request_body_size_kb = 128
   }
   
   # Configure availability zones to match the public IP
@@ -184,11 +218,11 @@ module "application_gateway" {
     }
   }
 
-  # HTTP listeners
+  # HTTP listeners - ensure it uses private IP configuration
   http_listeners = {
     default = {
       name                           = "default-listener"
-      frontend_ip_configuration_name = "public-ip-config"
+      frontend_ip_configuration_name = "private-ip-config"  # Using private IP configuration only
       frontend_port_name             = "port_80"
       protocol                       = "Http"
     }
@@ -207,7 +241,39 @@ module "application_gateway" {
   }
 
   depends_on = [
-    module.vnet,
-    azurerm_subnet.appgw_subnet
+    module.vnet
   ]
+}
+
+*/
+# Create the reverse peering using official AVM peering module
+module "vnet_peering_reverse" {
+  source  = "Azure/avm-res-network-virtualnetwork/azurerm//modules/peering"
+  version = "0.8.1"
+  
+  count                    = var.create_reverse_peering && var.remote_virtual_network_id != null && var.remote_resource_group_name != null && var.remote_vnet_full_name != null ? 1 : 0
+  providers                = { azurerm = azurerm.remote_subscription }
+  
+  name                     = local.reverse_peering_name
+  
+  # Fixing the virtual_network input format
+  virtual_network = {
+    name                = var.remote_vnet_full_name
+    resource_group_name = var.remote_resource_group_name
+    resource_id         = var.remote_virtual_network_id # Adding the required resource_id field
+  }
+  
+  # Fixing the remote_virtual_network input format
+  remote_virtual_network = {
+    id = module.vnet.resource.id
+    resource_id = module.vnet.resource.id # Adding the required resource_id field
+  }
+  
+  allow_virtual_network_access = true
+  allow_forwarded_traffic      = false  # Disabled receiving forwarded traffic
+  allow_gateway_transit        = false
+  use_remote_gateways          = false
+
+  # Ensure the forward peering is created first
+  depends_on = [module.vnet]
 }
