@@ -1,99 +1,82 @@
-locals {
-  # Base naming pattern: BU-Region-Archetype-WL-Env-WLDesc
-  #name_prefix = "${var.business_unit}-${var.region_short}-${var.archetype}-${var.workload}-${var.environment}-${var.workload_description}"
-  name_prefix = "${var.business_unit}-${var.region_short}-${var.archetype}-${var.workload}-${var.environment}"
-  # Resource-specific names
-  vnet_name = "${local.name_prefix}-vnet"
-  subnet_name = "${local.name_prefix}-snet"
-  nsg_name = "${local.name_prefix}-nsg"
-  rg_name = "${local.name_prefix}-vnet-rg"
-  rt_name = "${local.name_prefix}-rt"
-  
-  # Derived names
-  peering_name = "peer-${local.vnet_name}-to-remote-vnet"
-}
+# Naming components - these combine to create all resource names
+business_unit        = "ns"
+region_short         = "cc"
+archetype            = "conn"
+workload             = "shs"
+environment          = "dev"
+#workload_description = "core_hub"
 
-module "rg_main" {
-  source  = "Azure/avm-res-resources-resourcegroup/azurerm"
-  version = "0.2.1"
+# Location and network settings
+location                = "canadacentral"
+subnet_address_prefixes = ["10.1.0.0/28"]
+address_space_vnet1     = ["10.1.0.0/24"]
+enable_vm_protection    = true
+encryption              = false
+create_nsg              = true
+create_route_table      = true
 
-  name     = local.rg_name
-  location = var.location
-}
+# Authentication details
+subscription_id         = "1e437fdf-bd78-431d-ba95-1498f0e84c10"
+client_id               = "aeb81ef1-8fe3-4430-8f67-2f6d58a6dac4"
+tenant_id               = "72f988bf-86f1-41af-91ab-2d7cd011db47"
 
-module "nsg" {
-  source  = "Azure/avm-res-network-networksecuritygroup/azurerm"
-  version = "~> 0.1"
+# Network configuration
+dns_servers             = ["10.0.2.4"]
+encryption_enforcement  = "DropUnencrypted"
+encryption_type         = "EncryptionAtRestWithPlatformKey"
 
-  name                = local.nsg_name
-  location            = var.location
-  resource_group_name = module.rg_main.name
-  
-  security_rules = {
-    for idx, rule in var.security_rules : rule.name => {
-      name                       = rule.name
-      priority                   = rule.priority
-      direction                  = rule.direction
-      access                     = rule.access
-      protocol                   = rule.protocol
-      source_port_range          = rule.source_port_range
-      destination_port_range     = rule.destination_port_range
-      source_address_prefix      = rule.source_address_prefix
-      destination_address_prefix = rule.destination_address_prefix
-    }
+# Security rules
+security_rules = [
+  {
+    name                       = "DenyAllInbound"
+    priority                   = 4096
+    direction                  = "Inbound"
+    access                     = "Deny"
+    protocol                   = "*"
+    source_address_prefix      = "*"
+    source_port_range          = "*"
+    destination_address_prefix = "*"
+    destination_port_range     = "*"
   }
+]
 
-  depends_on = [module.rg_main]
-}
+#remote_virtual_network_id = "/subscriptions/1e437fdf-bd78-431d-ba95-1498f0e84c10/resourceGroups/ns-cc-online-shs-dev-core_hub-vnet-rg/providers/Microsoft.Network/virtualNetworks/ns-cc-online-shs-dev-core_hub-vnet"
 
-# Virtual network with integrated subnet and NSG association
-module "vnet" {
-  source  = "Azure/avm-res-network-virtualnetwork/azurerm"
-  version = "~> 0.1"
+# Next Hop Type for Route Table
+#next_hop_type = "VirtualAppliance"
 
-  name                = local.vnet_name
-  location            = var.location
-  resource_group_name = module.rg_main.name
-  address_space       = var.address_space_vnet1
-  
-  # Configure DNS servers properly using the required format
-  dns_servers = {
-    dns_servers = var.dns_servers
-  }
-  
-  enable_vm_protection = var.enable_vm_protection
-  
-  encryption = {
-    enabled     = var.encryption
-    enforcement = var.encryption_enforcement
-    type        = var.encryption_type
-  }
-  
-  flow_timeout_in_minutes = var.flow_timeout_in_minutes
-  
-  # Define subnets directly in the VNet module with NSG association
-  subnets = {
-    "${local.subnet_name}" = {
-      name                                     = local.subnet_name
-      address_prefixes                         = var.subnet_address_prefixes
-      network_security_group = {
-        id = module.nsg.resource.id
-      }
-      private_endpoint_network_policies_enabled = true
-    }
-  }
-
-  # Add peering configuration only if remote_virtual_network_id is provided
-  # peerings = var.remote_virtual_network_id != null ? {
-  #   peer-to-remote-vnet = {
-  #     name                              = local.peering_name
-  #     remote_virtual_network_resource_id = var.remote_virtual_network_id
-  #     allow_virtual_network_access      = true
-  #     allow_forwarded_traffic           = true
-  #     allow_gateway_transit             = false
-  #     use_remote_gateways               = false
-  #   }
-  # } : {}
-  
-  depends_on = [module.rg_main, module.nsg]
-}
+# Routes commented out in original file remain commented
+# # Routes
+# routes = [
+#   {
+#     name           = "Internet"
+#     address_prefix = "0.0.0.0/0"
+#     next_hop_ip    = "10.0.0.4"
+#   },
+#   {
+#     name           = "Hub"
+#     address_prefix = "10.0.0.0/24"
+#     next_hop_ip    = "10.0.0.4"
+#   },
+#   {
+#     name           = "Spokes"
+#     address_prefix = "10.1.0.0/16"
+#     next_hop_ip    = "10.0.0.4"
+#   },
+#   {
+#     name           = "On-Prem"
+#     address_prefix = "192.168.0.0/16"
+#     next_hop_ip    = "10.0.0.4"
+#   },
+	
+#     {
+#     name           = "KMS1"
+#     address_prefix = "20.118.99.224/32"
+#     next_hop_ip    = null
+#   },
+# {
+#     name           = "KMS2"
+#     address_prefix = "40.83.235.53/32"
+#     next_hop_ip    = null
+#   }
+# ]
