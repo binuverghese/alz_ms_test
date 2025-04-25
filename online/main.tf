@@ -129,7 +129,7 @@ module "appgw_pip" {
 
 module "application_gateway" {
   source             = "Azure/avm-res-network-applicationgateway/azurerm"
-  version            = "0.3.0"
+  version            = "0.4.0"
 
   # Resource group and location (use existing modules)
   resource_group_name = module.rg_appgw.name
