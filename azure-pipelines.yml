@@ -9,17 +9,13 @@ parameters:
   - name: folderName
     displayName: "Select Terraform Folder"
     type: string
-    default: "connected_online"
+    default: "connected"
     values:
-      - "firewall_bastion_hub"
-      - "cloud_exclusive"
-      - "cloud_exclusive_online"
+      - "HUB_FIREWALL_BASTION"
+      - "cloudexclusive"
       - "connected"
-      - "connected_online"
-      - "isolated"
-      - "isolated_online"
-      - "terraform-template"
-      - "terraform_template_avm"
+      - "online"
+
 
   - name: environment
     displayName: "Select Environment"
