@@ -84,3 +84,95 @@ variable "app_gateway_name" {
   type        = string
   default     = "appgw-dev-013"
 }
+
+variable "remote_virtual_network_id" {
+  description = "The full resource ID of the remote virtual network to peer with"
+  type        = string
+  default     = null
+}
+
+variable "remote_vnet_name" {
+  description = "The name of the remote virtual network to peer with"
+  type        = string
+  default     = "spoke_hub-vnet"
+}
+
+# Variables for cross-subscription VNET peering
+variable "remote_subscription_id" {
+  description = "Subscription ID where the remote VNET is located"
+  type        = string
+  default     = null
+}
+
+variable "remote_tenant_id" {
+  description = "Tenant ID for the remote subscription (if different from primary)"
+  type        = string
+  default     = null
+}
+
+variable "create_reverse_peering" {
+  description = "Whether to create the reverse peering from remote VNET to local VNET"
+  type        = bool
+  default     = false
+}
+
+variable "remote_resource_group_name" {
+  description = "Resource group name where the remote VNET is located"
+  type        = string
+  default     = null
+}
+
+variable "remote_vnet_full_name" {
+  description = "Full name of the remote VNET"
+  type        = string
+  default     = null
+}
+
+# Variables for naming convention components
+variable "bu" {
+  description = "Business unit prefix for resource naming (e.g., ns)"
+  type        = string
+  default     = "ns"
+}
+
+variable "region_short" {
+  description = "Short region code for resource naming (e.g., cc for Canada Central)"
+  type        = string
+  default     = "cc"
+}
+
+variable "archetype" {
+  description = "Archetype for resource naming (e.g., online, corp)"
+  type        = string
+  default     = "online"
+}
+
+variable "wl" {
+  description = "Workload identifier for resource naming (e.g., shs)"
+  type        = string
+  default     = "shs"
+}
+
+variable "env" {
+  description = "Environment for resource naming (e.g., prod, dev, test)"
+  type        = string
+  default     = "dev"
+}
+
+variable "wl_desc" {
+  description = "Workload description for resource naming (e.g., core_hub)"
+  type        = string
+  default     = "core_hub"
+}
+
+variable "firewall_name" {
+  description = "The name of the Azure Firewall"
+  type        = string
+  default     = ""
+}
+
+variable "firewall_policy_name" {
+  description = "The name of the Azure Firewall Policy"
+  type        = string
+  default     = ""
+}
